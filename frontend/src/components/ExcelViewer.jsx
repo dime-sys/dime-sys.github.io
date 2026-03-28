@@ -6,12 +6,13 @@ import "ag-grid-community/styles/ag-theme-quartz.css";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetChange, enabledSheets = [], onEnabledSheetsChange, pendingSheetRule = { tables: [] } }) {
+export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetChange, enabledSheets = [], onEnabledSheetsChange, pendingSheetRule = { tables: [] }, previewRows = 50, onPreviewRowsChange }) {
   const gridRef = useRef();
 
   const [startCell, setStartCell] = useState(null);
   const [endCell, setEndCell] = useState(null);
   const [extractionMode, setExtractionMode] = useState("range");
+  const [isRawOnlyMode, setIsRawOnlyMode] = useState(false);
   const [showHeaderModal, setShowHeaderModal] = useState(false);
   const [headerOption, setHeaderOption] = useState("keep_existing");
   const [customHeaders, setCustomHeaders] = useState([]);
@@ -45,7 +46,7 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
   const rows = data.preview || [];
 
   const normalizedColumns = useMemo(
-    () => columns.map((col) => String(col)),
+    () => columns.filter((col) => col !== "_row").map((col) => String(col)),
     [columns]
   );
 
@@ -62,16 +63,35 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
   );
 
   const columnDefs = useMemo(
-    () =>
-      normalizedColumns.map((col) => ({
-        headerName: col,
-        field: col,
-        cellClass: (params) => getCellClass(params),
-      })),
+    () => {
+      const rowNumCol = {
+        headerName: "#",
+        field: "_row",
+        width: 52,
+        minWidth: 52,
+        maxWidth: 52,
+        pinned: "left",
+        suppressMovable: true,
+        sortable: false,
+        filter: false,
+        cellStyle: { color: "#9ca3af", fontWeight: 500, fontSize: "11px", background: "#f9fafb", textAlign: "right", paddingRight: "8px" },
+        headerClass: "row-num-header",
+      };
+      return [
+        rowNumCol,
+        ...normalizedColumns.map((col) => ({
+          headerName: col,
+          field: col,
+          cellClass: (params) => getCellClass(params),
+        })),
+      ];
+    },
     [normalizedColumns, startCell, endCell]
   );
 
   const onCellClicked = (params) => {
+    if (isRawOnlyMode) return;
+    if (params.colDef.field === "_row") return;
     if (!startCell) {
       setStartCell({ row: params.rowIndex, col: params.colDef.field });
     } else if (!endCell) {
@@ -81,6 +101,25 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
       setEndCell(null);
     }
   };
+
+  const buildRawOnlyRule = () => ({
+    table_name: tableName?.trim() || "raw_file",
+    extraction_mode: "raw_only",
+    start_row: 0,
+    end_row: 0,
+    columns: [],
+    horizontal_anchor_row: null,
+    horizontal_start_column: null,
+    horizontal_end_column: null,
+    vertical_header_column: null,
+    vertical_start_row: null,
+    vertical_end_row: null,
+    header_option: "keep_existing",
+    null_strategy: "none",
+    auto_cast_types: false,
+    shape_transform: { mode: "none" },
+    custom_headers: null,
+  });
 
   const getColumnRange = () => {
     const startIndex = normalizedColumns.indexOf(startCell.col);
@@ -190,6 +229,26 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
   };
 
   const handleSave = () => {
+    if (isRawOnlyMode) {
+      const rule = buildRawOnlyRule();
+      onSaveRule(rule);
+      setStartCell(null);
+      setEndCell(null);
+      setShowHeaderModal(false);
+      setHeaderOption("keep_existing");
+      setCustomHeaders([]);
+      setTableName("");
+      setNullStrategy("none");
+      setAutoCastTypes(true);
+      setShapeMode("none");
+      setUnpivotIdColumns("");
+      setUnpivotValueColumns("");
+      setPivotIndexColumns("");
+      setPivotColumn("");
+      setPivotValueColumn("");
+      return;
+    }
+
     if (!startCell || !endCell) {
       alert("Selecciona celda inicio y celda fin");
       return;
@@ -304,21 +363,68 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
   return (
     <div className="excel-viewer">
       <div className="excel-toolbar">
+        <div style={{ marginBottom: "8px" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setIsRawOnlyMode((prev) => {
+                const next = !prev;
+                if (next) {
+                  onSaveRule(buildRawOnlyRule(), { silent: true });
+                }
+                return next;
+              });
+              setStartCell(null);
+              setEndCell(null);
+              setShowHeaderModal(false);
+              setHeaderOption("keep_existing");
+              setCustomHeaders([]);
+            }}
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "10px",
+              padding: "10px 12px",
+              borderRadius: "8px",
+              border: `1.5px solid ${isRawOnlyMode ? "#0284c7" : "#d1d5db"}`,
+              background: isRawOnlyMode ? "#e0f2fe" : "#ffffff",
+              color: isRawOnlyMode ? "#075985" : "#374151",
+              cursor: "pointer",
+            }}
+            title="Regla especial: mover el archivo completo sin aplicar extracción"
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontWeight: 700, fontSize: "12px" }}>
+              <span style={{ fontSize: "14px" }}>🧱</span>
+              Mover archivo completo (crudo)
+            </span>
+            <span style={{ fontSize: "11px", fontWeight: 700 }}>
+              {isRawOnlyMode ? "ACTIVO" : "INACTIVO"}
+            </span>
+          </button>
+          <div style={{ marginTop: "5px", fontSize: "11px", color: "#6b7280" }}>
+            Si activas esta regla, no necesitas seleccionar rangos ni encabezados. La instancia solo moverá el archivo crudo.
+          </div>
+        </div>
+
         <div className="excel-toolbar-row">
           <span className="section-kicker" style={{ margin: 0 }}>Acciones de regla</span>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <label style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Hoja</label>
             <select
               value={selectedSheet || data.current_sheet_name || ""}
-              onChange={(e) => onSheetChange && onSheetChange(e.target.value)}
+              onChange={(e) => !isRawOnlyMode && onSheetChange && onSheetChange(e.target.value)}
+              disabled={isRawOnlyMode}
               style={{
                 minWidth: "150px",
                 padding: "5px 8px",
                 border: "1px solid #d1d5db",
                 borderRadius: "7px",
-                background: "#fff",
-                color: "#111827",
+                background: isRawOnlyMode ? "#f3f4f6" : "#fff",
+                color: isRawOnlyMode ? "#9ca3af" : "#111827",
                 fontSize: "12px",
+                cursor: isRawOnlyMode ? "not-allowed" : "pointer",
               }}
             >
               {(data.sheet_names || []).map((sheet) => (
@@ -327,9 +433,18 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
             </select>
           </div>
           <div className="excel-actions">
-            <button className="btn-primary section-btn" onClick={handleSave}>Guardar regla</button>
+            <button
+              className="btn-primary section-btn"
+              onClick={handleSave}
+              disabled={isRawOnlyMode}
+              style={{ opacity: isRawOnlyMode ? 0.5 : 1, cursor: isRawOnlyMode ? "not-allowed" : "pointer" }}
+              title={isRawOnlyMode ? "En modo crudo, la regla se define con el botón superior" : "Guardar reglas de hoja"}
+            >
+              Guardar reglas de hoja
+            </button>
             <button
               className="btn-secondary section-btn"
+              disabled={isRawOnlyMode}
               onClick={() => {
                 setStartCell(null);
                 setEndCell(null);
@@ -337,16 +452,18 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
                 setHeaderOption("keep_existing");
                 setCustomHeaders([]);
               }}
+              style={{ opacity: isRawOnlyMode ? 0.5 : 1, cursor: isRawOnlyMode ? "not-allowed" : "pointer" }}
+              title={isRawOnlyMode ? "No aplica en modo crudo" : "Limpiar selección"}
             >
               Limpiar seleccion
             </button>
           </div>
         </div>
 
-        <div style={{ marginTop: "8px", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", background: "#f9fafb", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "8px" }}>
+        <div style={{ marginTop: "8px", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", background: "#f9fafb", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "8px", opacity: isRawOnlyMode ? 0.45 : 1, pointerEvents: isRawOnlyMode ? "none" : "auto" }}>
           <div>
             <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", marginBottom: "4px", display: "block" }}>Modo extraccion</label>
-            <select value={extractionMode} onChange={(e) => setExtractionMode(e.target.value)} style={{ width: "100%", padding: "5px 7px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "12px" }}>
+            <select value={extractionMode} onChange={(e) => { setExtractionMode(e.target.value); setIsRawOnlyMode(false); }} style={{ width: "100%", padding: "5px 7px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "12px" }}>
               <option value="range">Rango (inicio-fin)</option>
               <option value="headers_horizontal">Encabezados horizontal</option>
               <option value="headers_vertical">Encabezados vertical</option>
@@ -382,16 +499,16 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
             <select
               value={shapeMode}
               onChange={(e) => setShapeMode(e.target.value)}
-              disabled={extractionMode === "headers_vertical"}
-              style={{ width: "100%", padding: "5px 7px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "12px", opacity: extractionMode === "headers_vertical" ? 0.6 : 1 }}
+              disabled={extractionMode === "headers_vertical" || isRawOnlyMode}
+              style={{ width: "100%", padding: "5px 7px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "12px", opacity: extractionMode === "headers_vertical" || isRawOnlyMode ? 0.6 : 1 }}
             >
               <option value="none">Sin cambio</option>
               <option value="unpivot">Unpivot</option>
               <option value="pivot">Pivot</option>
             </select>
-            {extractionMode === "headers_vertical" && (
+            {(extractionMode === "headers_vertical" || isRawOnlyMode) && (
               <div style={{ marginTop: "4px", fontSize: "10px", color: "#9ca3af", lineHeight: 1.35 }}>
-                En modo vertical, shape no aplica.
+                {isRawOnlyMode ? "En modo crudo no se aplica transformación." : "En modo vertical, shape no aplica."}
               </div>
             )}
           </div>
@@ -402,14 +519,14 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
             >
               <input
                 type="checkbox"
-                checked={extractionMode === "headers_vertical" ? false : autoCastTypes}
-                disabled={extractionMode === "headers_vertical"}
+                checked={extractionMode === "headers_vertical" || isRawOnlyMode ? false : autoCastTypes}
+                disabled={extractionMode === "headers_vertical" || isRawOnlyMode}
                 onChange={(e) => setAutoCastTypes(e.target.checked)}
               />
               Auto tipado
             </label>
           </div>
-          {extractionMode !== "headers_vertical" && shapeMode === "unpivot" && (
+          {!isRawOnlyMode && extractionMode !== "headers_vertical" && shapeMode === "unpivot" && (
             <>
               <div>
                 <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", marginBottom: "4px", display: "block" }}>Unpivot id_columns</label>
@@ -421,7 +538,7 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
               </div>
             </>
           )}
-          {extractionMode !== "headers_vertical" && shapeMode === "pivot" && (
+          {!isRawOnlyMode && extractionMode !== "headers_vertical" && shapeMode === "pivot" && (
             <>
               <div>
                 <label style={{ fontSize: "10px", fontWeight: 600, color: "#6b7280", marginBottom: "4px", display: "block" }}>Pivot index_columns</label>
@@ -437,6 +554,7 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
               </div>
             </>
           )}
+
         </div>
 
         {(pendingSheetRule?.tables || []).length > 0 && (
@@ -449,14 +567,58 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
           </div>
         )}
 
-        {(data.sheet_names || []).length > 1 && (
-          <div style={{ marginTop: "8px", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", background: "#f9fafb" }}>
-            <div style={{ fontSize: "11px", fontWeight: 600, color: "#6b7280", marginBottom: "6px" }}>
-              Hojas a configurar y procesar
+        {(data.sheet_names || []).length > 1 && ([
+          <div key="sheet-selector" style={{ marginTop: "8px", padding: "10px", border: "1px solid #e5e7eb", borderRadius: "8px", background: "#f9fafb" }}>
+            {/* Header row with title + select-all controls */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 600, color: "#6b7280" }}>
+                Hojas a configurar y procesar
+                <span style={{ marginLeft: "6px", fontWeight: 400, color: "#9ca3af" }}>
+                  ({(pendingEnabledSheets || []).length}/{(data.sheet_names || []).length} seleccionadas)
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <button
+                  type="button"
+                  onClick={() => setPendingEnabledSheets([...(data.sheet_names || [])])}
+                  style={{ fontSize: "10px", padding: "3px 8px", background: "white", border: "1px solid #d1d5db", borderRadius: "5px", cursor: "pointer", color: "#374151", fontWeight: 600 }}
+                >
+                  ✓ Todas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPendingEnabledSheets([])}
+                  style={{ fontSize: "10px", padding: "3px 8px", background: "white", border: "1px solid #d1d5db", borderRadius: "5px", cursor: "pointer", color: "#374151", fontWeight: 600 }}
+                >
+                  ✕ Ninguna
+                </button>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "8px" }}>
+
+            {/* Compact scrollable grid — 2 columns, max 5 rows visible */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "4px 16px",
+              maxHeight: (data.sheet_names || []).length > 10 ? "150px" : undefined,
+              overflowY: (data.sheet_names || []).length > 10 ? "auto" : undefined,
+              paddingRight: (data.sheet_names || []).length > 10 ? "4px" : undefined,
+              marginBottom: "8px",
+            }}>
               {(data.sheet_names || []).map((sheet) => (
-                <label key={sheet} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "12px", color: "#374151" }}>
+                <label key={sheet} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "12px",
+                  color: (pendingEnabledSheets || []).includes(sheet) ? "#1d4ed8" : "#374151",
+                  padding: "4px 6px",
+                  borderRadius: "5px",
+                  background: (pendingEnabledSheets || []).includes(sheet) ? "#eff6ff" : "transparent",
+                  cursor: "pointer",
+                  border: `1px solid ${(pendingEnabledSheets || []).includes(sheet) ? "#bfdbfe" : "transparent"}`,
+                  userSelect: "none",
+                }}>
                   <input
                     type="checkbox"
                     checked={(pendingEnabledSheets || []).includes(sheet)}
@@ -467,11 +629,13 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
                         setPendingEnabledSheets((prev) => (prev || []).filter((s) => s !== sheet));
                       }
                     }}
+                    style={{ accentColor: "#1d4ed8" }}
                   />
-                  {sheet}
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sheet}</span>
                 </label>
               ))}
             </div>
+
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 className="btn-secondary"
@@ -494,7 +658,7 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
               </button>
             </div>
           </div>
-        )}
+        ])}
 
         {(startCell || endCell) && (
           <div className="excel-range-pills">
@@ -624,13 +788,41 @@ export default function ExcelViewer({ data, onSaveRule, selectedSheet, onSheetCh
         </div>
       )}
 
-      <div className="ag-theme-quartz excel-grid" style={{ height: 400, marginTop: 10 }}>
-        <AgGridReact
-          ref={gridRef}
-          rowData={normalizedRows}
-          columnDefs={columnDefs}
-          onCellClicked={onCellClicked}
-        />
+      <div className="excel-grid-wrapper">
+        <div className="ag-theme-quartz excel-grid" style={{ height: 520, marginTop: 10 }}>
+          <AgGridReact
+            ref={gridRef}
+            rowData={normalizedRows}
+            columnDefs={columnDefs}
+            onCellClicked={onCellClicked}
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px", justifyContent: "flex-end" }}>
+          <span style={{ fontSize: "11px", color: "#9ca3af" }}>
+            Mostrando {normalizedRows.length} fila{normalizedRows.length !== 1 ? "s" : ""}
+          </span>
+          <span style={{ fontSize: "11px", color: "#9ca3af" }}>·</span>
+          <span style={{ fontSize: "11px", color: "#6b7280", fontWeight: 600 }}>Filas del preview:</span>
+          {[50, 100, 200, 500].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPreviewRowsChange && onPreviewRowsChange(n)}
+              style={{
+                fontSize: "11px",
+                padding: "2px 7px",
+                borderRadius: "5px",
+                border: `1px solid ${previewRows === n ? "#3b82f6" : "#d1d5db"}`,
+                background: previewRows === n ? "#eff6ff" : "white",
+                color: previewRows === n ? "#1d4ed8" : "#374151",
+                fontWeight: previewRows === n ? 700 : 400,
+                cursor: "pointer",
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
       </div>
 
       <style>

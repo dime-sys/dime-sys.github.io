@@ -1,14 +1,90 @@
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body, Query, Header
 from datetime import datetime
 import uuid
+from typing import Optional
 
 from app.services.processor import apply_rules
 from app.routes.upload import FILES_DB
+from app.services.output_delivery.contracts import OutputContract
+from app.services.output_delivery import engine as delivery_engine
+
+
+def _get_folder_path(project_id: str) -> list:
+    """Return the list of node names from root to *project_id* (inclusive)."""
+    if not project_id:
+        return []
+    try:
+        from app.routes.projects import PROJECTS_DB, find_node_by_id
+
+        def _ancestors(target_id, node, path):
+            if node.id == target_id:
+                return path + [node.name]
+            for child in node.children:
+                result = _ancestors(target_id, child, path + [node.name])
+                if result:
+                    return result
+            return None
+
+        for root in PROJECTS_DB.values():
+            path = _ancestors(project_id, root, [])
+            if path:
+                return path
+    except Exception:
+        pass
+    return []
+
+
+def _get_folder_ids(project_id: str) -> list:
+    """Return the list of node IDs from root to *project_id* (inclusive)."""
+    if not project_id:
+        return []
+    try:
+        from app.routes.projects import PROJECTS_DB
+
+        def _ancestor_ids(target_id, node, path):
+            if node.id == target_id:
+                return path + [node.id]
+            for child in node.children:
+                result = _ancestor_ids(target_id, child, path + [node.id])
+                if result:
+                    return result
+            return None
+
+        for root in PROJECTS_DB.values():
+            path = _ancestor_ids(project_id, root, [])
+            if path:
+                return path
+    except Exception:
+        pass
+    return []
 
 router = APIRouter()
 
 EXECUTIONS_DB = []
 DEFAULT_EXECUTION_USER = "user_x"
+
+
+def _resolve_execution_user(authorization: Optional[str]) -> str:
+    """Resolve the authenticated username for execution audit; fallback to default."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        try:
+            from app.db.user_store import SESSIONS_DB, USERS_DB
+            uid = SESSIONS_DB.get(token)
+            if uid:
+                user = USERS_DB.get(uid)
+                if user and user.get("username"):
+                    return user["username"]
+        except Exception:
+            pass
+    return DEFAULT_EXECUTION_USER
+
+
+def _is_raw_only_rule(rule: dict) -> bool:
+    tables = (rule or {}).get("tables") if isinstance(rule, dict) else None
+    if not tables:
+        return (rule or {}).get("extraction_mode") == "raw_only"
+    return all((t or {}).get("extraction_mode") == "raw_only" for t in tables)
 
 
 def get_process(process_id: str):
@@ -46,8 +122,8 @@ def serialize_result_df(result_df):
     }
 
 
-def store_rule_version(process_record: dict, sheet_name: str, rule: dict):
-    applied_at = datetime.utcnow().isoformat()
+def store_rule_version(process_record: dict, sheet_name: str, rule: dict, created_by: str = DEFAULT_EXECUTION_USER):
+    applied_at = datetime.utcnow().isoformat() + "+00:00"
     active_rule = get_active_rule(process_record, sheet_name)
     next_version = (
         len([r for r in process_record.get("rule_versions", []) if r.get("sheet_name") == sheet_name]) + 1
@@ -59,6 +135,7 @@ def store_rule_version(process_record: dict, sheet_name: str, rule: dict):
         "sheet_name": sheet_name,
         "rule": rule,
         "created_at": applied_at,
+        "created_by": created_by or DEFAULT_EXECUTION_USER,
         "is_active": True,
     }
 
@@ -74,7 +151,7 @@ def store_rule_version(process_record: dict, sheet_name: str, rule: dict):
 
 
 @router.post("/")
-def save_rule(payload: dict = Body(...)):
+def save_rule(payload: dict = Body(...), authorization: Optional[str] = Header(None)):
     process_id = payload.get("process_id") or payload.get("file_id")
     rule = payload.get("rule")
     sheet_name = payload.get("sheet_name")
@@ -84,6 +161,8 @@ def save_rule(payload: dict = Body(...)):
 
     if not rule:
         return {"error": "rule requerida"}
+
+    actor_username = _resolve_execution_user(authorization)
 
     process_record = get_process(process_id)
 
@@ -114,34 +193,77 @@ def save_rule(payload: dict = Body(...)):
     print("=" * 60)
 
     try:
-        result_df = apply_rules(df, rule)
-        serialized = serialize_result_df(result_df)
-        stored_rule = store_rule_version(process_record, sheet_name, rule)
+        had_previous_rule_for_sheet = any(
+            r.get("sheet_name") == sheet_name for r in process_record.get("rule_versions", [])
+        )
+        is_raw_only = _is_raw_only_rule(rule)
+        if is_raw_only:
+            result_df = None
+            serialized = {"tables": [], "result": []}
+        else:
+            result_df = apply_rules(df, rule)
+            serialized = serialize_result_df(result_df)
+        stored_rule = store_rule_version(process_record, sheet_name, rule, created_by=actor_username)
         applied_at = stored_rule["created_at"]
 
-        execution = {
-            "id": str(uuid.uuid4()),
-            "process_id": process_id,
-            "file_id": process_id,
-            "file_name": process_record.get("process_name") or process_record.get("latest_input_name"),
-            "latest_input_name": process_record.get("latest_input_name"),
-            "sheet_name": sheet_name,
-            "rule": rule,
-            "rule_version_id": stored_rule["id"],
-            "rule_version": stored_rule["version"],
-            "result": serialized["result"],
-            "tables": serialized.get("tables", []),
-            "timestamp": applied_at,
-            "status": "success",
-            "uploaded_by": DEFAULT_EXECUTION_USER,
-        }
+        execution = None
+        execution_created = False
+        # First-time configuration should save rule only (no execution / no delivery).
+        if had_previous_rule_for_sheet and not is_raw_only:
+            execution = {
+                "id": str(uuid.uuid4()),
+                "process_id": process_id,
+                "file_id": process_id,
+                "file_name": process_record.get("process_name") or process_record.get("latest_input_name"),
+                "latest_input_name": process_record.get("latest_input_name"),
+                "sheet_name": sheet_name,
+                "rule": rule,
+                "rule_version_id": stored_rule["id"],
+                "rule_version": stored_rule["version"],
+                "result": serialized["result"],
+                "tables": serialized.get("tables", []),
+                "timestamp": applied_at,
+                "status": "success",
+                "uploaded_by": actor_username,
+            }
 
-        process_record.setdefault("executions", []).append(execution)
-        EXECUTIONS_DB.append(execution)
+            process_record.setdefault("executions", []).append(execution)
+            EXECUTIONS_DB.append(execution)
+            execution_created = True
+
+            # ── Output Delivery (non-blocking: failures must not fail the execution) ──
+            try:
+                tables_df = result_df if isinstance(result_df, dict) else {"default": result_df}
+                folder_path = _get_folder_path(process_record.get("project_id"))
+                folder_ids = _get_folder_ids(process_record.get("project_id"))
+                for tname, tdf in tables_df.items():
+                    contract = OutputContract(
+                        execution_id=execution["id"],
+                        process_id=process_id,
+                        process_name=process_record.get("process_name") or process_record.get("latest_input_name", ""),
+                        folder_id=process_record.get("project_id"),
+                        folder_path=folder_path,
+                        folder_ids=folder_ids,
+                        sheet_name=sheet_name,
+                        table_name=tname,
+                        columns=list(tdf.columns),
+                        row_count=len(tdf),
+                        extraction_mode=rule.get("extraction_mode", "range"),
+                        timestamp=applied_at,
+                        rule_version_id=stored_rule["id"],
+                        rule_version=stored_rule["version"],
+                        rule_config=rule,
+                        process_metadata=process_record.get("metadata", {}),
+                    )
+                    delivery_engine.dispatch(contract, tdf)
+            except Exception:
+                pass
+            # ── end Output Delivery ──
 
         return {
-            "status": "processed",
+            "status": "processed" if execution_created else "configured",
             "execution": execution,
+            "execution_created": execution_created,
             "rule_version": stored_rule,
         }
 
@@ -153,7 +275,7 @@ def save_rule(payload: dict = Body(...)):
 
 
 @router.post("/bulk")
-def save_rules_bulk(payload: dict = Body(...)):
+def save_rules_bulk(payload: dict = Body(...), authorization: Optional[str] = Header(None)):
     process_id = payload.get("process_id") or payload.get("file_id")
     rules_by_sheet = payload.get("rules_by_sheet") or {}
 
@@ -162,6 +284,8 @@ def save_rules_bulk(payload: dict = Body(...)):
 
     if not isinstance(rules_by_sheet, dict) or not rules_by_sheet:
         return {"error": "rules_by_sheet requerido"}
+
+    actor_username = _resolve_execution_user(authorization)
 
     process_record = get_process(process_id)
     if not process_record:
@@ -185,14 +309,77 @@ def save_rules_bulk(payload: dict = Body(...)):
             continue
 
         try:
+            had_previous_rule_for_sheet = any(
+                r.get("sheet_name") == sheet_name for r in process_record.get("rule_versions", [])
+            )
+            is_raw_only = _is_raw_only_rule(rule)
             df = sheets_data[sheet_name].copy()
             df.columns = df.columns.map(str)
-            apply_rules(df, rule)
-            saved_rule = store_rule_version(process_record, sheet_name, rule)
+            if is_raw_only:
+                result_df = None
+                serialized = {"tables": [], "result": []}
+            else:
+                result_df = apply_rules(df, rule)
+                serialized = serialize_result_df(result_df)
+            saved_rule = store_rule_version(process_record, sheet_name, rule, created_by=actor_username)
+            applied_at = saved_rule["created_at"]
+
+            execution_created = False
+            if had_previous_rule_for_sheet and not is_raw_only:
+                execution = {
+                    "id": str(uuid.uuid4()),
+                    "process_id": process_id,
+                    "file_id": process_id,
+                    "file_name": process_record.get("process_name") or process_record.get("latest_input_name"),
+                    "latest_input_name": process_record.get("latest_input_name"),
+                    "sheet_name": sheet_name,
+                    "rule": rule,
+                    "rule_version_id": saved_rule["id"],
+                    "rule_version": saved_rule["version"],
+                    "result": serialized["result"],
+                    "tables": serialized.get("tables", []),
+                    "timestamp": applied_at,
+                    "status": "success",
+                    "uploaded_by": actor_username,
+                }
+                process_record.setdefault("executions", []).append(execution)
+                EXECUTIONS_DB.append(execution)
+                execution_created = True
+
+                # ── Output Delivery ──
+                try:
+                    tables_df = result_df if isinstance(result_df, dict) else {"default": result_df}
+                    folder_path = _get_folder_path(process_record.get("project_id"))
+                    folder_ids = _get_folder_ids(process_record.get("project_id"))
+                    for tname, tdf in tables_df.items():
+                        contract = OutputContract(
+                            execution_id=execution["id"],
+                            process_id=process_id,
+                            process_name=process_record.get("process_name") or process_record.get("latest_input_name", ""),
+                            folder_id=process_record.get("project_id"),
+                            folder_path=folder_path,
+                            folder_ids=folder_ids,
+                            sheet_name=sheet_name,
+                            table_name=tname,
+                            columns=list(tdf.columns),
+                            row_count=len(tdf),
+                            extraction_mode=rule.get("extraction_mode", "range"),
+                            timestamp=applied_at,
+                            rule_version_id=saved_rule["id"],
+                            rule_version=saved_rule["version"],
+                            rule_config=rule,
+                            process_metadata=process_record.get("metadata", {}),
+                        )
+                        delivery_engine.dispatch(contract, tdf)
+                except Exception:
+                    pass
+                # ── end Output Delivery ──
+
             saved.append({
                 "sheet_name": sheet_name,
                 "rule_version_id": saved_rule["id"],
                 "version": saved_rule["version"],
+                "execution_created": execution_created,
             })
             applied_rules_by_sheet[sheet_name] = rule
         except Exception as e:
