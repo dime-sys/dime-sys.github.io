@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from typing import List, Optional
 import json
 import os
@@ -7,6 +7,47 @@ import uuid
 from app.models.project import ProjectNode, ProjectTree
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+def _get_role(authorization: Optional[str]) -> Optional[str]:
+    """Resolve a Bearer token to the user's role, or None if unauthenticated."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization[7:]
+    from app.db.user_store import SESSIONS_DB, USERS_DB
+    uid = SESSIONS_DB.get(token)
+    if not uid:
+        return None
+    user = USERS_DB.get(uid)
+    return user["role"] if user else None
+
+
+def _get_full_user(authorization: Optional[str]) -> Optional[dict]:
+    """Resolve a Bearer token to the full user dict."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization[7:]
+    from app.db.user_store import SESSIONS_DB, USERS_DB
+    uid = SESSIONS_DB.get(token)
+    if not uid:
+        return None
+    return USERS_DB.get(uid)
+
+
+def _collect_all_ids(node: "ProjectNode") -> set:
+    """Return the set of all node IDs in a subtree (node itself + all descendants)."""
+    ids = {node.id}
+    for child in node.children:
+        ids |= _collect_all_ids(child)
+    return ids
+
+
+def _find_root_of_node(node_id: str) -> Optional["ProjectNode"]:
+    """Return the root-level ProjectNode that contains node_id in its subtree."""
+    for root in PROJECTS_DB.values():
+        if node_id in _collect_all_ids(root):
+            return root
+    return None
 
 # In-memory project store
 PROJECTS_DB = {}
@@ -83,11 +124,16 @@ def find_parent_node(node_id: str, search_node: Optional[ProjectNode] = None) ->
     return None
 
 @router.get("/")
-async def get_all_projects():
-    """Get all root projects (tree structure)"""
+async def get_all_projects(authorization: Optional[str] = Header(None)):
+    """Get all root projects. Configuradors only see their assigned projects."""
     config = get_config()
-    projects = list(PROJECTS_DB.values())
-    
+    user = _get_full_user(authorization)
+    if user and user["role"] == "configurador":
+        assigned = set(user.get("assigned_project_ids", []))
+        projects = [p for p in PROJECTS_DB.values() if p.id in assigned]
+    else:
+        projects = list(PROJECTS_DB.values())
+
     return {
         "projects": projects,
         "count": len(projects),
@@ -97,20 +143,40 @@ async def get_all_projects():
     }
 
 @router.post("/")
-async def create_project(name: str, parent_id: Optional[str] = None):
-    """Create a new project node"""
+async def create_project(
+    name: str,
+    parent_id: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Create a new project node. Root nodes: admin only. Child nodes: admin or configurador."""
+    role = _get_role(authorization)
+    if role == "responsable":
+        raise HTTPException(status_code=403, detail="Los responsables no pueden crear proyectos")
+    if not parent_id and role not in ("admin", None):
+        # non-admin non-anonymous trying to create root → only admin allowed
+        # (None = unauthenticated: allow for dev convenience)
+        raise HTTPException(status_code=403, detail="Solo el administrador puede crear proyectos raíz")
+    if not parent_id and role == "configurador":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede crear proyectos raíz")
+
+    # Configurador can only create children within their assigned projects
+    if parent_id and role == "configurador":
+        user = _get_full_user(authorization)
+        if user:
+            root = _find_root_of_node(parent_id)
+            assigned = set(user.get("assigned_project_ids", []))
+            if root and root.id not in assigned:
+                raise HTTPException(status_code=403, detail="No tienes acceso a este proyecto")
+
     config = get_config()
-    max_levels = config.get("project_max_levels", 4)
-    
+    max_levels = config.get("project_max_levels", 5)
+
     if parent_id:
         parent_node = find_node_by_id(parent_id)
         if not parent_node:
-            raise HTTPException(status_code=404, detail="Parent project not found")
-        
-        # Check if we can add a child (depth limit)
+            raise HTTPException(status_code=404, detail="Carpeta padre no encontrada")
         if parent_node.level >= max_levels:
-            raise HTTPException(status_code=400, detail=f"Cannot create more than {max_levels} levels")
-        
+            raise HTTPException(status_code=400, detail=f"Máximo {max_levels} niveles de profundidad permitidos")
         new_node = ProjectNode(
             id=str(uuid.uuid4()),
             name=name,
@@ -120,7 +186,6 @@ async def create_project(name: str, parent_id: Optional[str] = None):
         )
         parent_node.children.append(new_node)
     else:
-        # Create root project
         new_node = ProjectNode(
             id=str(uuid.uuid4()),
             name=name,
@@ -128,11 +193,8 @@ async def create_project(name: str, parent_id: Optional[str] = None):
             created_at=datetime.now().isoformat()
         )
         PROJECTS_DB[new_node.id] = new_node
-    
-    return {
-        "status": "success",
-        "project": new_node
-    }
+
+    return {"status": "success", "project": new_node}
 
 @router.get("/{project_id}")
 async def get_project(project_id: str):
@@ -146,27 +208,39 @@ async def get_project(project_id: str):
     }
 
 @router.put("/{project_id}")
-async def update_project(project_id: str, name: Optional[str] = None):
-    """Update a project (rename)"""
+async def update_project(
+    project_id: str,
+    name: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Rename a node. Admin or configurador only."""
+    role = _get_role(authorization)
+    if role == "responsable":
+        raise HTTPException(status_code=403, detail="Sin permiso para renombrar")
     node = find_node_by_id(project_id)
     if not node:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
+        raise HTTPException(status_code=404, detail="Nodo no encontrado")
     if name:
         node.name = name
-    
-    return {
-        "status": "success",
-        "project": node
-    }
+    return {"status": "success", "project": node}
 
 @router.delete("/{project_id}")
-async def delete_project(project_id: str, cascade: bool = True):
-    """Delete a project"""
+async def delete_project(
+    project_id: str,
+    cascade: bool = True,
+    authorization: Optional[str] = Header(None),
+):
+    """Delete a project node. Admin or configurador only."""
+    role = _get_role(authorization)
+    if role == "responsable":
+        raise HTTPException(status_code=403, detail="Sin permiso para eliminar")
+    # Root nodes: only admin can delete
+    if project_id in PROJECTS_DB and role == "configurador":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede eliminar proyectos raíz")
     node = find_node_by_id(project_id)
     if not node:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
+        raise HTTPException(status_code=404, detail="Nodo no encontrado")
+
     # If this is a root project
     if project_id in PROJECTS_DB:
         deleted_count = 1 + len(_count_descendants(node))

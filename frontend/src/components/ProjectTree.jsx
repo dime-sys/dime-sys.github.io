@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 
-const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null, refreshKey = 0 }) => {
+const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null, refreshKey = 0, currentUser = null }) => {
   const [projects, setProjects] = useState([]);
-  const [config, setConfig] = useState({ max_levels: 4, level_names: [] });
+  const [config, setConfig] = useState({ max_levels: 5, level_names: [] });
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [creating, setCreating] = useState(null);
   const [newName, setNewName] = useState('');
   const [loading, setLoading] = useState(true);
+
+  const role = currentUser?.role || null;
+  const canManageTree = role === 'admin' || role === 'configurador' || role === null;
+  const canCreateRoot = role === 'admin' || role === null;
+
+  const authHeaders = () => {
+    const token = localStorage.getItem('authToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   useEffect(() => {
     loadProjects();
@@ -65,13 +74,12 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const createProject = async (parentId = null) => {
     if (!newName.trim()) return;
-
     try {
-      const response = await fetch(`http://localhost:8000/projects/?name=${encodeURIComponent(newName)}&parent_id=${parentId || ''}`, {
-        method: 'POST'
-      });
+      const response = await fetch(
+        `http://localhost:8000/projects/?name=${encodeURIComponent(newName)}&parent_id=${parentId || ''}`,
+        { method: 'POST', headers: authHeaders() }
+      );
       const data = await response.json();
-      
       if (data.status === 'success') {
         loadProjects();
         setCreating(null);
@@ -83,17 +91,14 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
   };
 
   const deleteProject = async (projectId) => {
-    if (!confirm('¿Eliminar este proyecto y todos sus subproyectos?')) return;
-
+    if (!confirm('¿Eliminar este nodo y todos sus subniveles?')) return;
     try {
       const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders(),
       });
       const data = await response.json();
-      
-      if (data.status === 'success') {
-        loadProjects();
-      }
+      if (data.status === 'success') loadProjects();
     } catch (error) {
       console.error('Error deleting project:', error);
     }
@@ -101,13 +106,12 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const updateProject = async (projectId) => {
     if (!editName.trim()) return;
-
     try {
-      const response = await fetch(`http://localhost:8000/projects/${projectId}?name=${encodeURIComponent(editName)}`, {
-        method: 'PUT'
-      });
+      const response = await fetch(
+        `http://localhost:8000/projects/${projectId}?name=${encodeURIComponent(editName)}`,
+        { method: 'PUT', headers: authHeaders() }
+      );
       const data = await response.json();
-      
       if (data.status === 'success') {
         loadProjects();
         setEditingId(null);
@@ -119,7 +123,11 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const TreeNode = ({ node, depth = 0 }) => {
     const isExpanded = expandedNodes.has(node.id);
-    const canAddChild = depth < config.max_levels - 1;
+    const canAddChild = canManageTree && depth < config.max_levels - 1;
+    const isRoot = node.level === 1;
+    // Configurador can add children but NOT delete/rename root nodes
+    const canEditThisNode = canManageTree && !(role === 'configurador' && isRoot);
+    const canDeleteThisNode = canManageTree && !(role === 'configurador' && isRoot);
     const levelAllowsFiles = true;
     const isSelected = selectedProjectId === node.id;
 
@@ -190,32 +198,36 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
                         event.stopPropagation();
                         setCreating(node.id);
                       }}
-                      title="Agregar subproyecto"
+                      title={`Agregar ${config.level_names?.[node.level] || 'subnivel'}`}
                     >
                       +
                     </button>
                   )}
-                  <button
-                    className="action-btn edit-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setEditingId(node.id);
-                      setEditName(node.name);
-                    }}
-                    title="Editar nombre"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    className="action-btn delete-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteProject(node.id);
-                    }}
-                    title="Eliminar"
-                  >
-                    🗑
-                  </button>
+                  {canEditThisNode && (
+                    <button
+                      className="action-btn edit-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setEditingId(node.id);
+                        setEditName(node.name);
+                      }}
+                      title="Renombrar"
+                    >
+                      ✎
+                    </button>
+                  )}
+                  {canDeleteThisNode && (
+                    <button
+                      className="action-btn delete-btn"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deleteProject(node.id);
+                      }}
+                      title="Eliminar"
+                    >
+                      🗑
+                    </button>
+                  )}
                 </>
               ) : null}
             </div>
@@ -540,14 +552,16 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
     <div className="project-tree-wrapper">
       <div className="project-tree-container">
         <div className="tree-header">
-          <h3>Estructura de Proyectos</h3>
-          <button
-            className="btn-new-root"
-            onClick={() => setCreating('root')}
-            title="Crear nuevo proyecto raíz"
-          >
-            + Nuevo Proyecto
-          </button>
+          <h3>Proyectos</h3>
+          {canCreateRoot && (
+            <button
+              className="btn-new-root"
+              onClick={() => setCreating('root')}
+              title="Crear nuevo proyecto"
+            >
+              + Nuevo Proyecto
+            </button>
+          )}
         </div>
 
         {creating === 'root' && (
@@ -570,7 +584,11 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
         <div className="nodes-list">
           {projects.length === 0 ? (
-            <div className="empty-state">No hay proyectos. Crea uno nuevo para comenzar.</div>
+            <div className="empty-state">
+              {canCreateRoot
+                ? 'No hay proyectos. Crea uno nuevo para comenzar.'
+                : 'No tienes proyectos asignados.'}
+            </div>
           ) : (
             projects.map(project => (
               <TreeNode key={project.id} node={project} />
