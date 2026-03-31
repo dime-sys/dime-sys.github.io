@@ -9,6 +9,7 @@ from io import BytesIO
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from app.services.processor import apply_rules
+from app.db.database import load_snapshot, save_snapshot
 
 
 def _col_index_to_letter(n: int) -> str:
@@ -99,6 +100,18 @@ def _check_commitment_alert(record: dict) -> Optional[str]:
         fin_dt = max(end_dt for _, end_dt in windows)
         if now <= fin_dt:
             return None
+        # If the commitment was configured today AFTER the window already ended,
+        # don't penalize — the first real evaluation starts tomorrow.
+        set_at_str = record.get("commitment_schedule_set_at")
+        if set_at_str:
+            try:
+                set_at = datetime.fromisoformat(set_at_str)
+                if set_at.tzinfo is None:
+                    set_at = set_at.replace(tzinfo=_SCL)
+                if set_at.astimezone(_SCL).date() == now.date() and set_at.astimezone(_SCL) >= fin_dt:
+                    return None
+            except Exception:
+                pass
         # Window has ended — check if there was an upload today
         today_date = now.date()
         for e in reversed(record.get("executions", [])):
@@ -150,9 +163,14 @@ def _commitment_state_for_upload(schedule: dict, upload_dt: datetime) -> str:
 
 router = APIRouter()
 
-FILES_DB = {}
+FILES_NAMESPACE = "files"
+FILES_DB = load_snapshot(FILES_NAMESPACE, dict)
 DEFAULT_EXECUTION_USER = "user_x"
 _SCL = ZoneInfo("America/Santiago")
+
+
+def save_files_state() -> None:
+    save_snapshot(FILES_NAMESPACE, FILES_DB)
 
 
 def _now_scl() -> str:
@@ -321,10 +339,12 @@ def ensure_process(process_id: str):
 def append_execution_record(process_record: dict, execution: dict):
     process_record.setdefault("executions", []).append(execution)
     try:
-        from app.routes.rules import EXECUTIONS_DB
+        from app.routes.rules import EXECUTIONS_DB, save_executions_state
         EXECUTIONS_DB.append(execution)
+        save_executions_state()
     except Exception:
         pass
+    save_files_state()
 
 
 @router.post("/")
@@ -431,6 +451,7 @@ async def upload_file(
                     record["commitment_schedule_set_at"] = now
             if project_id:
                 record["project_id"] = project_id
+            save_files_state()
 
             return {
                 "file_id": process_id,
@@ -492,13 +513,15 @@ async def upload_file(
             "rule_versions": [],
             "executions": [],
         }
+        save_files_state()
 
         if project_id:
             try:
-                from app.routes.projects import find_node_by_id
+                from app.routes.projects import find_node_by_id, save_projects_state
                 node = find_node_by_id(project_id)
                 if node and process_id not in node.files:
                     node.files.append(process_id)
+                    save_projects_state()
             except Exception as e:
                 print(f"Warning: Could not associate process with project: {str(e)}")
 
@@ -656,6 +679,7 @@ async def upload_process_instance(
     record["current_data"] = workbook[selected_sheet]
     record["latest_input_name"] = file.filename
     record["updated_at"] = now
+    save_files_state()
     _save_original_file(
         contents, file.filename,
         record.get("process_name") or file.filename,
@@ -862,6 +886,7 @@ def update_sheet_selection(file_id: str, payload: dict):
             if record.get("sheet_data", {}).get(enabled[0]) is not None:
                 record["current_data"] = record["sheet_data"][enabled[0]]
         record["updated_at"] = _now_scl()
+        save_files_state()
         return {
             "status": "ok",
             "enabled_sheet_names": record["enabled_sheet_names"],
@@ -903,6 +928,7 @@ def update_metadata(file_id: str, payload: dict):
             if "commitment_schedule_set_at" not in record and new_schedule and new_schedule.get("activo"):
                 record["commitment_schedule_set_at"] = _now_scl()
         record["updated_at"] = _now_scl()
+        save_files_state()
 
         return {"status": "ok"}
     except HTTPException:
@@ -922,15 +948,17 @@ def delete_file(file_id: str):
 
         if file_project_id:
             try:
-                from app.routes.projects import find_node_by_id
+                from app.routes.projects import find_node_by_id, save_projects_state
 
                 node = find_node_by_id(file_project_id)
                 if node:
                     node.files = [stored_file_id for stored_file_id in node.files if stored_file_id != file_id]
+                    save_projects_state()
             except Exception as unlink_error:
                 print(f"Warning unlinking file from project: {str(unlink_error)}")
 
         del FILES_DB[file_id]
+        save_files_state()
 
         return {"status": "ok", "message": f"Proceso {file_id} eliminado correctamente"}
     except HTTPException:
@@ -955,6 +983,7 @@ def get_file(file_id: str, sheet_name: Optional[str] = Query(default=None), prev
             df = sheets[selected_sheet]
             record["current_sheet_name"] = selected_sheet
             record["current_data"] = df
+            save_files_state()
         else:
             df = record["current_data"]
             selected_sheet = None

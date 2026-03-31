@@ -2,14 +2,34 @@ import hashlib
 import uuid
 from datetime import datetime
 
-# In-memory stores
-USERS_DB = {}        # { user_id: user_dict }
-SESSIONS_DB = {}     # { token_str: user_id }
-PENDING_USERS_DB = {}  # { pending_id: { id, email, password_hash, requested_at, last_attempt } }
+from app.db.database import load_snapshot, save_snapshot, state_exists
+
+
+USERS_NAMESPACE = "users"
+SESSIONS_NAMESPACE = "sessions"
+PENDING_USERS_NAMESPACE = "pending_users"
+
+
+# In-memory stores backed by persisted snapshots
+USERS_DB = load_snapshot(USERS_NAMESPACE, dict)        # { user_id: user_dict }
+SESSIONS_DB = load_snapshot(SESSIONS_NAMESPACE, dict)  # { token_str: user_id }
+PENDING_USERS_DB = load_snapshot(PENDING_USERS_NAMESPACE, dict)  # { pending_id: { id, email, password_hash, requested_at, last_attempt } }
 
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def save_users_state() -> None:
+    save_snapshot(USERS_NAMESPACE, USERS_DB)
+
+
+def save_sessions_state() -> None:
+    save_snapshot(SESSIONS_NAMESPACE, SESSIONS_DB)
+
+
+def save_pending_users_state() -> None:
+    save_snapshot(PENDING_USERS_NAMESPACE, PENDING_USERS_DB)
 
 
 def _seed():
@@ -25,4 +45,8 @@ def _seed():
         }
 
 
-_seed()
+if not state_exists(USERS_NAMESPACE):
+    _seed()
+    save_users_state()
+    save_sessions_state()
+    save_pending_users_state()

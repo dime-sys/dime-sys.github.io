@@ -1,14 +1,28 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 from app.routes import upload, rules, config, projects, admin, auth, users
 
 app = FastAPI()
 
+# CORS origins can be overridden with CORS_ORIGINS="http://localhost,http://localhost:5173"
+cors_origins_env = os.getenv("CORS_ORIGINS")
+allowed_origins = [
+    "http://localhost",
+    "http://localhost:80",
+    "http://localhost:5173",
+    "http://127.0.0.1",
+    "http://127.0.0.1:80",
+    "http://127.0.0.1:5173",
+]
+if cors_origins_env:
+    allowed_origins = [origin.strip() for origin in cors_origins_env.split(",") if origin.strip()]
+
 # 🔥 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

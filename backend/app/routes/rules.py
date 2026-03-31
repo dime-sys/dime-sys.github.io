@@ -7,6 +7,7 @@ from app.services.processor import apply_rules
 from app.routes.upload import FILES_DB
 from app.services.output_delivery.contracts import OutputContract
 from app.services.output_delivery import engine as delivery_engine
+from app.db.database import load_snapshot, save_snapshot
 
 
 def _get_folder_path(project_id: str) -> list:
@@ -60,8 +61,13 @@ def _get_folder_ids(project_id: str) -> list:
 
 router = APIRouter()
 
-EXECUTIONS_DB = []
+EXECUTIONS_NAMESPACE = "executions"
+EXECUTIONS_DB = load_snapshot(EXECUTIONS_NAMESPACE, list)
 DEFAULT_EXECUTION_USER = "user_x"
+
+
+def save_executions_state() -> None:
+    save_snapshot(EXECUTIONS_NAMESPACE, EXECUTIONS_DB)
 
 
 def _resolve_execution_user(authorization: Optional[str]) -> str:
@@ -123,6 +129,8 @@ def serialize_result_df(result_df):
 
 
 def store_rule_version(process_record: dict, sheet_name: str, rule: dict, created_by: str = DEFAULT_EXECUTION_USER):
+    from app.routes.upload import save_files_state
+
     applied_at = datetime.utcnow().isoformat() + "+00:00"
     active_rule = get_active_rule(process_record, sheet_name)
     next_version = (
@@ -146,6 +154,7 @@ def store_rule_version(process_record: dict, sheet_name: str, rule: dict, create
     process_record["current_rule_version_id"] = rule_version_id
     process_record.setdefault("current_rule_version_id_by_sheet", {})[sheet_name] = rule_version_id
     process_record["updated_at"] = applied_at
+    save_files_state()
 
     return stored_rule
 
@@ -229,6 +238,9 @@ def save_rule(payload: dict = Body(...), authorization: Optional[str] = Header(N
 
             process_record.setdefault("executions", []).append(execution)
             EXECUTIONS_DB.append(execution)
+            from app.routes.upload import save_files_state
+            save_files_state()
+            save_executions_state()
             execution_created = True
 
             # ── Output Delivery (non-blocking: failures must not fail the execution) ──
@@ -344,6 +356,9 @@ def save_rules_bulk(payload: dict = Body(...), authorization: Optional[str] = He
                 }
                 process_record.setdefault("executions", []).append(execution)
                 EXECUTIONS_DB.append(execution)
+                from app.routes.upload import save_files_state
+                save_files_state()
+                save_executions_state()
                 execution_created = True
 
                 # ── Output Delivery ──
@@ -403,6 +418,8 @@ def save_rules_bulk(payload: dict = Body(...), authorization: Optional[str] = He
         }
         process_record.setdefault("rule_sets", []).append(rule_set)
         process_record["current_rule_set_id"] = rule_set["id"]
+        from app.routes.upload import save_files_state
+        save_files_state()
 
     return {
         "status": "ok" if not errors else "partial",
@@ -453,4 +470,7 @@ def clear_executions():
     EXECUTIONS_DB.clear()
     for process_record in FILES_DB.values():
         process_record["executions"] = []
+    from app.routes.upload import save_files_state
+    save_files_state()
+    save_executions_state()
     return {"status": "ok"}

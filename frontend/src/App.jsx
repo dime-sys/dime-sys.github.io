@@ -204,6 +204,12 @@ function App() {
     loadProjects();
   };
 
+  const handleSetupCancel = () => {
+    // Allow admin users to continue without creating a project yet.
+    setShowSetupWizard(false);
+    setSetupComplete(true);
+  };
+
   const loadFileData = async (processOrId, sheetName = null, rowCount = previewRows) => {
     const processId = typeof processOrId === "string" ? processOrId : processOrId?.id;
     if (!processId) return;
@@ -469,7 +475,7 @@ function App() {
 
   // Mostrar wizard si es necesario
   if (showSetupWizard && !setupComplete) {
-    return <ProjectSetupWizard onSetupComplete={handleSetupComplete} onCancel={() => {}} />;
+    return <ProjectSetupWizard onSetupComplete={handleSetupComplete} onCancel={handleSetupCancel} />;
   }
 
   const infoPill = {

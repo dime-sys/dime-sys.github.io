@@ -11,7 +11,13 @@ from typing import List, Optional
 
 import pandas as pd
 
-from app.db.output_store import ARTIFACTS_DB, DELIVERY_JOBS_DB, SUBSCRIPTIONS_DB
+from app.db.output_store import (
+    ARTIFACTS_DB,
+    DELIVERY_JOBS_DB,
+    SUBSCRIPTIONS_DB,
+    save_artifacts_state,
+    save_delivery_jobs_state,
+)
 from .contracts import ArtifactResult, OutputContract
 from .local_sink import LocalSink
 
@@ -94,6 +100,7 @@ def dispatch(contract: OutputContract, df: pd.DataFrame) -> Optional[dict]:
             "artifact_ids": [],
         }
         DELIVERY_JOBS_DB.append(job)
+        save_delivery_jobs_state()
 
         error_count = 0
         for sub in subscriptions:
@@ -126,6 +133,7 @@ def dispatch(contract: OutputContract, df: pd.DataFrame) -> Optional[dict]:
                 "written_at": datetime.utcnow().isoformat(),
             }
             ARTIFACTS_DB.append(artifact)
+            save_artifacts_state()
             job["artifact_ids"].append(artifact_id)
             if not result.success:
                 error_count += 1
@@ -133,6 +141,7 @@ def dispatch(contract: OutputContract, df: pd.DataFrame) -> Optional[dict]:
         job["error_count"] = error_count
         job["status"] = "completed" if error_count == 0 else "partial"
         job["finished_at"] = datetime.utcnow().isoformat()
+        save_delivery_jobs_state()
         return job
 
     except Exception as exc:

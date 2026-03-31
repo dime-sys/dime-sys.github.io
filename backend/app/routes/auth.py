@@ -5,7 +5,15 @@ from typing import Optional
 import uuid
 from datetime import datetime
 
-from app.db.user_store import USERS_DB, SESSIONS_DB, PENDING_USERS_DB, _hash_password
+from app.db.user_store import (
+    USERS_DB,
+    SESSIONS_DB,
+    PENDING_USERS_DB,
+    _hash_password,
+    save_pending_users_state,
+    save_sessions_state,
+    save_users_state,
+)
 
 router = APIRouter()
 
@@ -88,11 +96,14 @@ def login(body: LoginRequest):
         user.pop("preregistered", None)
         token = str(uuid.uuid4())
         SESSIONS_DB[token] = user["id"]
+        save_users_state()
+        save_sessions_state()
         return {"token": token, "user": _public_user(user)}
 
     if user and user["password_hash"] == _hash_password(body.password):
         token = str(uuid.uuid4())
         SESSIONS_DB[token] = user["id"]
+        save_sessions_state()
         return {"token": token, "user": _public_user(user)}
 
     # 2. If it looks like an email and was not found as a registered user → pending flow
@@ -114,6 +125,7 @@ def login(body: LoginRequest):
                 "requested_at": datetime.now().isoformat(timespec="seconds"),
                 "last_attempt": datetime.now().isoformat(timespec="seconds"),
             }
+            save_pending_users_state()
         return JSONResponse(
             status_code=202,
             content={
@@ -136,4 +148,5 @@ def logout(authorization: Optional[str] = Header(None)):
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
         SESSIONS_DB.pop(token, None)
+        save_sessions_state()
     return {"success": True}

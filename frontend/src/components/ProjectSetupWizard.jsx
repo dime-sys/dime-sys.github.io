@@ -105,7 +105,7 @@ const ProjectSetupWizard = ({ onSetupComplete, onCancel }) => {
 
       const projectData = await projectResponse.json();
       if (projectData.status !== 'success') {
-        setError('Error al crear el proyecto');
+        setError(projectData?.detail || 'Error al crear el proyecto');
         setLoading(false);
         return;
       }

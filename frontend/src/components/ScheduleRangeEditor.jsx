@@ -58,6 +58,8 @@ const findFirstGap = (sortedRanges, minSize) => {
   return null;
 };
 
+const isValidHHMM = (str) => /^\d{2}:\d{2}$/.test(str) && toMinutes(str) <= DAY_MINUTES;
+
 export default function ScheduleRangeEditor({
   ranges,
   onChange,
@@ -66,6 +68,8 @@ export default function ScheduleRangeEditor({
 }) {
   const trackRef = useRef(null);
   const [drag, setDrag] = useState(null);
+  // localInputs holds the raw text the user is typing; keyed by "idx-start" / "idx-end"
+  const [localInputs, setLocalInputs] = useState({});
 
   const safeRanges = useMemo(() => normalizeRanges(ranges), [ranges]);
 
@@ -251,16 +255,77 @@ export default function ScheduleRangeEditor({
         <span>23:59</span>
       </div>
 
-      <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: "6px" }}>
+      <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))", gap: "6px" }}>
         {safeRanges.map((r, idx) => {
           const mins = toMinutes(r.hora_fin) - toMinutes(r.hora_inicio);
           const durH = Math.floor(mins / 60);
           const durM = mins % 60;
+
+          const startKey = `${idx}-start`;
+          const endKey = `${idx}-end`;
+          const startVal = localInputs[startKey] ?? r.hora_inicio;
+          const endVal   = localInputs[endKey]   ?? r.hora_fin;
+
+          const { minStart, maxEnd } = getNeighborBounds(safeRanges, idx);
+
+          const commitStart = (raw) => {
+            setLocalInputs((p) => { const n = { ...p }; delete n[startKey]; return n; });
+            if (!isValidHHMM(raw)) return;
+            const m = snap(clamp(toMinutes(raw), minStart, toMinutes(r.hora_fin) - MIN_RANGE_MINUTES));
+            const next = safeRanges.map((x, i) => i === idx ? { ...x, hora_inicio: toHHMM(m) } : { ...x });
+            updateRanges(next);
+          };
+
+          const commitEnd = (raw) => {
+            setLocalInputs((p) => { const n = { ...p }; delete n[endKey]; return n; });
+            if (!isValidHHMM(raw)) return;
+            const m = snap(clamp(toMinutes(raw), toMinutes(r.hora_inicio) + MIN_RANGE_MINUTES, maxEnd));
+            const next = safeRanges.map((x, i) => i === idx ? { ...x, hora_fin: toHHMM(m) } : { ...x });
+            updateRanges(next);
+          };
+
+          const inputStyle = (invalid) => ({
+            width: "62px",
+            padding: "2px 5px",
+            border: `1px solid ${invalid ? "#f87171" : "#c4b5fd"}`,
+            borderRadius: "5px",
+            fontSize: "11px",
+            fontFamily: "monospace",
+            color: "#1e1b4b",
+            background: invalid ? "#fef2f2" : "white",
+            outline: "none",
+          });
+
+          const startInvalid = localInputs[startKey] !== undefined && !isValidHHMM(localInputs[startKey]);
+          const endInvalid   = localInputs[endKey]   !== undefined && !isValidHHMM(localInputs[endKey]);
+
           return (
             <div key={`legend-${idx}`} style={{ border: "1px solid #e9d5ff", background: "#faf5ff", borderRadius: "7px", padding: "6px 8px" }}>
-              <div style={{ fontSize: "10px", fontWeight: 700, color: "#6d28d9", marginBottom: "2px" }}>Rango {idx + 1}</div>
-              <div style={{ fontSize: "11px", color: "#374151" }}><strong>Inicio:</strong> {r.hora_inicio}</div>
-              <div style={{ fontSize: "11px", color: "#374151" }}><strong>Fin:</strong> {r.hora_fin}</div>
+              <div style={{ fontSize: "10px", fontWeight: 700, color: "#6d28d9", marginBottom: "4px" }}>Rango {idx + 1}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px" }}>
+                <span style={{ fontSize: "11px", color: "#374151", width: "32px", flexShrink: 0 }}>Inicio</span>
+                <input
+                  type="time"
+                  value={startVal}
+                  onChange={(e) => setLocalInputs((p) => ({ ...p, [startKey]: e.target.value }))}
+                  onBlur={(e) => commitStart(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.target.blur(); } }}
+                  style={inputStyle(startInvalid)}
+                  title="Hora de inicio (HH:MM)"
+                />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px" }}>
+                <span style={{ fontSize: "11px", color: "#374151", width: "32px", flexShrink: 0 }}>Fin</span>
+                <input
+                  type="time"
+                  value={endVal}
+                  onChange={(e) => setLocalInputs((p) => ({ ...p, [endKey]: e.target.value }))}
+                  onBlur={(e) => commitEnd(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.target.blur(); } }}
+                  style={inputStyle(endInvalid)}
+                  title="Hora de fin (HH:MM)"
+                />
+              </div>
               <div style={{ fontSize: "10px", color: "#6b7280" }}>Duración: {durH}h {durM}m</div>
             </div>
           );
