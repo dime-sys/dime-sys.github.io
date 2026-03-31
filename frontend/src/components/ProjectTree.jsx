@@ -8,6 +8,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
   const [editName, setEditName] = useState('');
   const [creating, setCreating] = useState(null);
   const [newName, setNewName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(true);
 
   const role = currentUser?.role || null;
@@ -72,8 +73,47 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
     setExpandedNodes(newExpanded);
   };
 
+  const normalizeName = (value) => String(value || '').trim().toLowerCase();
+
+  const findNodeById = (nodes, nodeId) => {
+    for (const node of nodes || []) {
+      if (node.id === nodeId) return node;
+      const found = findNodeById(node.children || [], nodeId);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const hasSiblingNameConflict = (name, parentId = null, excludeId = null) => {
+    const target = normalizeName(name);
+    if (!target) return false;
+
+    const siblings = parentId
+      ? (findNodeById(projects, parentId)?.children || [])
+      : projects;
+
+    return siblings.some((n) => n.id !== excludeId && normalizeName(n.name) === target);
+  };
+
+  const createNameConflict = (() => {
+    if (creating === null) return false;
+    const parentId = creating === 'root' ? null : creating;
+    return hasSiblingNameConflict(newName, parentId);
+  })();
+
+  const editNameConflict = (() => {
+    if (!editingId) return false;
+    const node = findNodeById(projects, editingId);
+    if (!node) return false;
+    return hasSiblingNameConflict(editName, node.parent_id || null, node.id);
+  })();
+
   const createProject = async (parentId = null) => {
     if (!newName.trim()) return;
+    if (hasSiblingNameConflict(newName, parentId)) {
+      setNameError('Ya existe un proyecto con ese nombre en este nivel');
+      return;
+    }
     try {
       const response = await fetch(
         `http://localhost:8000/projects/?name=${encodeURIComponent(newName)}&parent_id=${parentId || ''}`,
@@ -84,6 +124,9 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
         loadProjects();
         setCreating(null);
         setNewName('');
+        setNameError('');
+      } else if (response.status === 409) {
+        setNameError(data?.detail || 'Ya existe un proyecto con ese nombre en este nivel');
       }
     } catch (error) {
       console.error('Error creating project:', error);
@@ -106,6 +149,11 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const updateProject = async (projectId) => {
     if (!editName.trim()) return;
+    const node = findNodeById(projects, projectId);
+    if (node && hasSiblingNameConflict(editName, node.parent_id || null, node.id)) {
+      setNameError('Ya existe un proyecto con ese nombre en este nivel');
+      return;
+    }
     try {
       const response = await fetch(
         `http://localhost:8000/projects/${projectId}?name=${encodeURIComponent(editName)}`,
@@ -115,6 +163,9 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
       if (data.status === 'success') {
         loadProjects();
         setEditingId(null);
+        setNameError('');
+      } else if (response.status === 409) {
+        setNameError(data?.detail || 'Ya existe un proyecto con ese nombre en este nivel');
       }
     } catch (error) {
       console.error('Error updating project:', error);
@@ -153,15 +204,22 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
                 <input
                   type="text"
                   value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  onChange={(e) => {
+                    setEditName(e.target.value);
+                    setNameError('');
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') updateProject(node.id);
-                    if (e.key === 'Escape') setEditingId(null);
+                    if (e.key === 'Escape') {
+                      setEditingId(null);
+                      setNameError('');
+                    }
                   }}
                   autoFocus
                 />
-                <button onClick={() => updateProject(node.id)} className="btn-save">✓</button>
-                <button onClick={() => setEditingId(null)} className="btn-cancel">✕</button>
+                <button onClick={() => updateProject(node.id)} className="btn-save" disabled={editNameConflict}>✓</button>
+                <button onClick={() => { setEditingId(null); setNameError(''); }} className="btn-cancel">✕</button>
+                {nameError && editNameConflict && <div className="name-error-inline">{nameError}</div>}
               </div>
             ) : (
               <>
@@ -239,15 +297,22 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
                 type="text"
                 placeholder={`Nombre del ${config.level_names?.[node.level] || `nivel ${node.level + 1}`}`}
                 value={newName}
-                onChange={(e) => setNewName(e.target.value)}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setNameError('');
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') createProject(node.id);
-                  if (e.key === 'Escape') setCreating(null);
+                  if (e.key === 'Escape') {
+                    setCreating(null);
+                    setNameError('');
+                  }
                 }}
                 autoFocus
               />
-              <button onClick={() => createProject(node.id)} className="btn-save">✓</button>
-              <button onClick={() => setCreating(null)} className="btn-cancel">✕</button>
+              <button onClick={() => createProject(node.id)} className="btn-save" disabled={createNameConflict}>✓</button>
+              <button onClick={() => { setCreating(null); setNameError(''); }} className="btn-cancel">✕</button>
+              {nameError && createNameConflict && <div className="name-error-inline">{nameError}</div>}
             </div>
           )}
         </div>
@@ -530,6 +595,13 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
       font-size: 12px;
     }
 
+    .project-tree-wrapper .name-error-inline {
+      grid-column: 1 / -1;
+      color: #b91c1c;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
     @media (max-width: 768px) {
       .project-tree-wrapper .btn-new-root {
         width: 100%;
@@ -570,15 +642,22 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
               type="text"
               placeholder={`Nombre del ${config.level_names?.[0] || 'Nivel 1'}`}
               value={newName}
-              onChange={(e) => setNewName(e.target.value)}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setNameError('');
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') createProject();
-                if (e.key === 'Escape') setCreating(null);
+                if (e.key === 'Escape') {
+                  setCreating(null);
+                  setNameError('');
+                }
               }}
               autoFocus
             />
-            <button onClick={() => createProject()} className="btn-save">✓</button>
-            <button onClick={() => setCreating(null)} className="btn-cancel">✕</button>
+            <button onClick={() => createProject()} className="btn-save" disabled={createNameConflict}>✓</button>
+            <button onClick={() => { setCreating(null); setNameError(''); }} className="btn-cancel">✕</button>
+            {nameError && createNameConflict && <div className="name-error-inline">{nameError}</div>}
           </div>
         )}
 

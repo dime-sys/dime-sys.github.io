@@ -4,7 +4,12 @@ import uuid
 from zoneinfo import ZoneInfo
 from typing import Optional
 
-from app.db.output_store import ARTIFACTS_DB, DELIVERY_JOBS_DB, SUBSCRIPTIONS_DB
+from app.db.output_store import (
+    ARTIFACTS_DB,
+    DELIVERY_JOBS_DB,
+    SUBSCRIPTIONS_DB,
+    save_subscriptions_state,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -407,9 +412,10 @@ def create_subscription(payload: dict = Body(...)):
         "provider": provider,
         "config": payload.get("config", {}),
         "active": payload.get("active", True),
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(_SCL).isoformat(timespec="seconds"),
     }
     SUBSCRIPTIONS_DB[sub_id] = sub
+    save_subscriptions_state()
     return sub
 
 
@@ -422,7 +428,8 @@ def update_subscription(sub_id: str, payload: dict = Body(...)):
     for key in allowed:
         if key in payload:
             sub[key] = payload[key]
-    sub["updated_at"] = datetime.utcnow().isoformat()
+    sub["updated_at"] = datetime.now(_SCL).isoformat(timespec="seconds")
+    save_subscriptions_state()
     return sub
 
 
@@ -431,6 +438,7 @@ def delete_subscription(sub_id: str):
     if sub_id not in SUBSCRIPTIONS_DB:
         raise HTTPException(status_code=404, detail="Suscripción no encontrada")
     del SUBSCRIPTIONS_DB[sub_id]
+    save_subscriptions_state()
     return {"status": "deleted", "id": sub_id}
 
 
@@ -881,7 +889,7 @@ def redispatch_execution(execution_id: str):
             columns=list(tdf.columns),
             row_count=len(tdf),
             extraction_mode=(rule or {}).get("extraction_mode", "range"),
-            timestamp=dt.utcnow().isoformat(),
+            timestamp=datetime.now(_SCL).isoformat(timespec="seconds"),
             rule_version_id=execution.get("rule_version_id"),
             rule_version=execution.get("rule_version"),
             rule_config=rule,

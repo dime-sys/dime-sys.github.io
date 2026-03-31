@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import uuid
 from app.models.project import ProjectNode, ProjectTree
+from app.db.database import load_snapshot, save_snapshot
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -49,11 +50,43 @@ def _find_root_of_node(node_id: str) -> Optional["ProjectNode"]:
             return root
     return None
 
-# In-memory project store
-PROJECTS_DB = {}
+PROJECTS_NAMESPACE = "projects"
+
+
+# In-memory project store backed by persisted snapshots
+PROJECTS_DB = load_snapshot(PROJECTS_NAMESPACE, dict)
+
+
+def save_projects_state() -> None:
+    save_snapshot(PROJECTS_NAMESPACE, PROJECTS_DB)
+
+
+def _normalize_project_name(value: Optional[str]) -> str:
+    return (value or "").strip().lower()
+
+
+def _has_sibling_name_conflict(name: str, parent_id: Optional[str], exclude_id: Optional[str] = None) -> bool:
+    target = _normalize_project_name(name)
+    if not target:
+        return False
+
+    if parent_id:
+        parent = find_node_by_id(parent_id)
+        if not parent:
+            return False
+        siblings = parent.children
+    else:
+        siblings = list(PROJECTS_DB.values())
+
+    for node in siblings:
+        if exclude_id and node.id == exclude_id:
+            continue
+        if _normalize_project_name(node.name) == target:
+            return True
+    return False
 
 def load_projects():
-    """Load projects from file (placeholder for future persistence)"""
+    """Return the current project snapshot."""
     return PROJECTS_DB
 
 def get_config():
@@ -168,6 +201,9 @@ async def create_project(
             if root and root.id not in assigned:
                 raise HTTPException(status_code=403, detail="No tienes acceso a este proyecto")
 
+    if _has_sibling_name_conflict(name, parent_id):
+        raise HTTPException(status_code=409, detail="Ya existe un proyecto con ese nombre en este nivel")
+
     config = get_config()
     max_levels = config.get("project_max_levels", 5)
 
@@ -193,6 +229,8 @@ async def create_project(
             created_at=datetime.now().isoformat()
         )
         PROJECTS_DB[new_node.id] = new_node
+
+    save_projects_state()
 
     return {"status": "success", "project": new_node}
 
@@ -221,7 +259,10 @@ async def update_project(
     if not node:
         raise HTTPException(status_code=404, detail="Nodo no encontrado")
     if name:
+        if _has_sibling_name_conflict(name, node.parent_id, exclude_id=node.id):
+            raise HTTPException(status_code=409, detail="Ya existe un proyecto con ese nombre en este nivel")
         node.name = name
+        save_projects_state()
     return {"status": "success", "project": node}
 
 @router.delete("/{project_id}")
@@ -245,6 +286,7 @@ async def delete_project(
     if project_id in PROJECTS_DB:
         deleted_count = 1 + len(_count_descendants(node))
         del PROJECTS_DB[project_id]
+        save_projects_state()
         return {
             "status": "success",
             "deleted_nodes": deleted_count,
@@ -258,6 +300,7 @@ async def delete_project(
     
     deleted_count = 1 + len(_count_descendants(node))
     parent_node.children = [child for child in parent_node.children if child.id != project_id]
+    save_projects_state()
     
     return {
         "status": "success",
@@ -282,6 +325,7 @@ async def add_file_to_project(project_id: str, file_id: str):
     
     if file_id not in node.files:
         node.files.append(file_id)
+        save_projects_state()
     
     return {
         "status": "success",
@@ -296,6 +340,7 @@ async def remove_file_from_project(project_id: str, file_id: str):
         raise HTTPException(status_code=404, detail="Project not found")
     
     node.files = [f for f in node.files if f != file_id]
+    save_projects_state()
     
     return {
         "status": "success",

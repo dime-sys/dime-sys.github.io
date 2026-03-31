@@ -145,6 +145,26 @@ function scheduleTooltip(schedule) {
 }
 
 // Mirrors backend _check_commitment_alert — recomputed client-side so it's always fresh
+// Map English weekday names (from Intl) to Spanish keys used in schedule.dias
+const _ENG_TO_SPA_DAY = { sunday: "domingo", monday: "lunes", tuesday: "martes", wednesday: "miercoles", thursday: "jueves", friday: "viernes", saturday: "sabado" };
+
+function _sclWeekdayName(date) {
+  const eng = new Intl.DateTimeFormat("en-US", { timeZone: SCL_TZ, weekday: "long" }).format(date).toLowerCase();
+  return _ENG_TO_SPA_DAY[eng] || eng;
+}
+
+function _sclMinutes(date) {
+  // Returns minutes-since-midnight for the given Date interpreted in SCL timezone
+  const p = getSCLDateParts(date);
+  return p.hour * 60 + p.minute;
+}
+
+function _sclDateKey(date) {
+  // Returns "YYYY-MM-DD" in SCL timezone for equality checks
+  const p = getSCLDateParts(date);
+  return `${p.year}-${String(p.month).padStart(2,"0")}-${String(p.day).padStart(2,"0")}`;
+}
+
 function computeCommitmentAlert(file) {
   const schedule = file.commitment_schedule;
   if (!schedule || !schedule.activo) return null;
@@ -152,33 +172,33 @@ function computeCommitmentAlert(file) {
     const { tipo, dias } = schedule;
     const ranges = getScheduleRanges(schedule);
     if (!ranges.length) return null;
+
     const now = new Date();
-    const todayName = DIAS_JS[now.getDay()];
+    const todayName = _sclWeekdayName(now);
     if (tipo !== "diario" && !(dias || []).includes(todayName)) return null;
 
-    const fin = ranges.reduce((acc, r) => {
-      const end = new Date(now);
-      const [hh, mm] = (r.hora_fin || "23:59").split(":").map(Number);
-      end.setHours(hh, mm, 0, 0);
-      return end > acc ? end : acc;
-    }, new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
+    // All comparisons use minutes-since-midnight in SCL — no browser timezone ambiguity
+    const nowMin = _sclMinutes(now);
+    const finMin = ranges.reduce((acc, r) => Math.max(acc, toMinutes(r.hora_fin)), 0);
 
-    if (now <= fin) return null; // window still open
-    // Window closed — check if any execution was uploaded ON TIME today
-    const todayStr = now.toDateString();
+    if (nowMin <= finMin) return null; // window still open
+
+    // If the commitment was configured today AFTER the window already ended,
+    // don't penalize — the first real evaluation starts tomorrow.
+    const setAtStr = file.commitment_schedule_set_at;
+    if (setAtStr) {
+      const setAtDate = new Date(setAtStr);
+      if (_sclDateKey(setAtDate) === _sclDateKey(now) && _sclMinutes(setAtDate) >= finMin) return null;
+    }
+
+    // Window closed — check if any execution was uploaded ON TIME today in SCL
+    const todayKey = _sclDateKey(now);
     for (const e of (file.last_executions || []).slice().reverse()) {
       if (!e.timestamp) continue;
-      const execDt = new Date(e.timestamp);
-      const inRange = ranges.some((r) => {
-        const start = new Date(now);
-        const end = new Date(now);
-        const [sh, sm] = r.hora_inicio.split(":").map(Number);
-        const [eh, em] = r.hora_fin.split(":").map(Number);
-        start.setHours(sh, sm, 0, 0);
-        end.setHours(eh, em, 0, 0);
-        return execDt >= start && execDt <= end;
-      });
-      if (execDt.toDateString() === todayStr && inRange && e.status !== "error_formato") return null;
+      const execDate = new Date(e.timestamp);
+      const execMin = _sclMinutes(execDate);
+      const inRange = ranges.some((r) => execMin >= toMinutes(r.hora_inicio) && execMin <= toMinutes(r.hora_fin));
+      if (_sclDateKey(execDate) === todayKey && inRange && e.status !== "error_formato") return null;
     }
     return "vencido";
   } catch { return null; }
@@ -459,6 +479,12 @@ const STATUS_LABEL = {
 
 export default function FilesTable({ onSelectFile, onViewHistory, selectedProjectId = null, selectedProjectName = null, currentUser = null }) {
   const [files, setFiles] = useState([]);
+  // Tick every 30 s so time-based indicators (commitment alert, next-expected) stay current
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
   const [selectedMetadata, setSelectedMetadata] = useState(null);
   const [editingFile, setEditingFile] = useState(null);
   const [showLegend, setShowLegend] = useState(false);

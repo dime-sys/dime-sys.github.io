@@ -1,0 +1,47 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: app_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=data_intake_management
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d data_intake_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  backend:
+    build: ./backend
+    container_name: app_backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/data_intake_management
+      - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:80,http://127.0.0.1:5173
+    volumes:
+      - ./output_delivery:/app/output_delivery
+
+  frontend:
+    build: ./frontend
+    container_name: app_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:

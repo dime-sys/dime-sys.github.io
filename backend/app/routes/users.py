@@ -4,7 +4,13 @@ from typing import Optional, List
 import uuid
 from datetime import datetime
 
-from app.db.user_store import USERS_DB, PENDING_USERS_DB, _hash_password
+from app.db.user_store import (
+    USERS_DB,
+    PENDING_USERS_DB,
+    _hash_password,
+    save_pending_users_state,
+    save_users_state,
+)
 from app.routes.auth import _get_user_by_token, _public_user
 
 router = APIRouter()
@@ -68,6 +74,7 @@ def create_user(body: CreateUserRequest, authorization: Optional[str] = Header(N
         "assigned_project_ids": body.assigned_project_ids,
         "created_at": datetime.utcnow().isoformat(),
     }
+    save_users_state()
     return _public_user(USERS_DB[user_id])
 
 
@@ -97,6 +104,7 @@ def update_user(user_id: str, body: UpdateUserRequest, authorization: Optional[s
             preserved = current_ids - accessible
             allowed_new = set(body.assigned_project_ids) & accessible
             user["assigned_project_ids"] = list(preserved | allowed_new)
+        save_users_state()
         return _public_user(user)
 
     # Admin path
@@ -112,6 +120,7 @@ def update_user(user_id: str, body: UpdateUserRequest, authorization: Optional[s
         user["password_hash"] = _hash_password(body.password)
     if body.assigned_project_ids is not None:
         user["assigned_project_ids"] = body.assigned_project_ids
+    save_users_state()
     return _public_user(user)
 
 
@@ -123,6 +132,7 @@ def delete_user(user_id: str, authorization: Optional[str] = Header(None)):
     if user_id not in USERS_DB:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     del USERS_DB[user_id]
+    save_users_state()
     return {"success": True}
 
 
@@ -154,6 +164,7 @@ def approve_pending(
     # Don't allow duplicate email as username
     if any(u["username"] == pending["email"] for u in USERS_DB.values()):
         del PENDING_USERS_DB[pending_id]
+        save_pending_users_state()
         raise HTTPException(status_code=409, detail="Ya existe un usuario con ese correo")
     user_id = str(uuid.uuid4())
     USERS_DB[user_id] = {
@@ -165,6 +176,8 @@ def approve_pending(
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }
     del PENDING_USERS_DB[pending_id]
+    save_users_state()
+    save_pending_users_state()
     return _public_user(USERS_DB[user_id])
 
 
@@ -174,6 +187,7 @@ def reject_pending(pending_id: str, authorization: Optional[str] = Header(None))
     if pending_id not in PENDING_USERS_DB:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     del PENDING_USERS_DB[pending_id]
+    save_pending_users_state()
     return {"success": True}
 
 
@@ -219,4 +233,5 @@ def preregister_user(body: PreRegisterRequest, authorization: Optional[str] = He
         "preregistered": True,
         "created_at": datetime.utcnow().isoformat(),
     }
+    save_users_state()
     return _public_user(USERS_DB[user_id])
