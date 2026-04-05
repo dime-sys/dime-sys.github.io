@@ -31,7 +31,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-data_intake_management}
-      - CORS_ORIGINS=http://${DOMAIN:-localhost}
+      - CORS_ORIGINS=http://${DOMAIN:-localhost},https://${DOMAIN:-localhost}
     volumes:
       - ./output_delivery:/app/output_delivery
     # No ports exposed — backend is accessed only through nginx
