@@ -492,29 +492,38 @@ def get_executions_by_file(file_id: str, sheet_name: str = Query(default=None)):
         e["in_range"] = _exec_in_range(e.get("timestamp", ""))
         enriched.append(e)
 
-    # Add missed executions as compromiso_vencido records
-    monitor_data = _build_process_monitor_row(
-        file_id,
-        process_record,
-        datetime.now(_SCL),
-    )
-    missed_dates = monitor_data.get("stats", {}).get("missed_dates", [])
-    for item in missed_dates:
-        date_str = item["date"] if isinstance(item, dict) else item
-        ranges = item.get("ranges", []) if isinstance(item, dict) else []
-        # Use end of first range as timestamp if available
-        if ranges:
-            end_time = ranges[-1]["hora_fin"]
-            timestamp = f"{date_str}T{end_time}:00"
-        else:
-            timestamp = date_str + "T23:59:00"
-        enriched.append({
-            "timestamp": timestamp,
-            "uploaded_by": "—",
-            "status": "compromiso_vencido",
-            "file_name": "Sin carga",
-            "in_range": False,
-        })
+    # Add compromiso_vencido records per closed window that had no on-time upload.
+    # Works per-window (not per-day) so late uploads and missed windows coexist correctly.
+    from datetime import timedelta
+    sched = process_record.get("commitment_schedule") or {}
+    set_at_str = process_record.get("commitment_schedule_set_at")
+    set_at = _parse_iso_local(set_at_str) if set_at_str else None
+    if sched.get("activo") and set_at:
+        now_scl = datetime.now(_SCL)
+        start_day = set_at.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_midnight = now_scl.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Pre-parse all real execution timestamps once
+        real_exec_ts = [
+            _parse_iso_local(e.get("timestamp", ""))
+            for e in process_record.get("executions", [])
+        ]
+        real_exec_ts = [ts for ts in real_exec_ts if ts is not None]
+        day = start_day
+        while day <= today_midnight:
+            if _schedule_applies_on_date(sched, day):
+                for w_start, w_end in _windows_for_date(sched, day):
+                    if w_end >= now_scl:
+                        continue  # window not yet closed
+                    has_on_time = any(w_start <= ts <= w_end for ts in real_exec_ts)
+                    if not has_on_time:
+                        enriched.append({
+                            "timestamp": w_end.isoformat(timespec="seconds"),
+                            "uploaded_by": "—",
+                            "status": "compromiso_vencido",
+                            "file_name": "Sin carga",
+                            "in_range": False,
+                        })
+            day += timedelta(days=1)
 
     enriched.sort(key=lambda e: e["timestamp"])
     return enriched

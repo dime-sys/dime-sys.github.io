@@ -103,7 +103,7 @@ export default function Executions({ executions, onSelect }) {
                   </span>
                 </div>
               </div>
-              {exec.status !== "missed" && (
+              {exec.status !== "missed" && exec.status !== "compromiso_vencido" && (
                 <button
                   className="execution-open-btn"
                   onClick={() => onSelect(exec)}

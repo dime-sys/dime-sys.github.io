@@ -749,11 +749,12 @@ export default function FilesTable({ onSelectFile, onViewHistory, selectedProjec
               {[
                 { dot: { bg: "#22c55e", border: "#22c55e" }, label: "Exitosa · en rango comprometido" },
                 { dot: { bg: "#22c55e", border: "#8b5cf6" }, label: "Exitosa · fuera del rango comprometido", borderStyle: true },
+                { dot: { bg: "#f59e0b", border: "#f59e0b" }, label: "Con errores · en rango comprometido" },
                 { dot: { bg: "#ef4444", border: "#ef4444" }, label: "Error / Error de formato · en rango" },
                 { dot: { bg: "#ef4444", border: "#8b5cf6" }, label: "Error · fuera del rango comprometido", borderStyle: true },
-                { dot: { bg: "#f59e0b", border: "#f59e0b" }, label: "Con errores · en rango comprometido" },
-                { dot: { bg: "#8b5cf6", border: "#8b5cf6" }, label: "Sin carga en ventana comprometida" },
-                { dot: { bg: "#d1d5db", border: "#d1d5db" }, label: "Sin regla configurada" },
+                { dot: { bg: "#0ea5e9", border: "#0ea5e9" }, label: "Solo archivo crudo (sin procesar)" },
+                { dot: { bg: "#8b5cf6", border: "#8b5cf6" }, label: "Compromiso vencido (sin carga)" },
+                { dot: { bg: "#ffffff", border: "#d1d5db" }, label: "Sin regla configurada" },
               ].map(({ dot, label, borderStyle }, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "7px" }}>
                   <span style={{ width: "11px", height: "11px", borderRadius: "50%", background: dot.bg, border: `2px solid ${dot.border}`, flexShrink: 0, boxSizing: "border-box", ...(borderStyle ? { outline: "1.5px solid #8b5cf6", outlineOffset: "1px" } : {}) }} />
