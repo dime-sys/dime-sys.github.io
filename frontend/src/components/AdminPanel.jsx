@@ -772,6 +772,7 @@ function CommitmentMonitorTab() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({ totals: {}, items: [], top_users: { on_time: [], late: [] } });
   const [userPopup, setUserPopup] = useState({ open: false, title: "", users: [] });
+  const [noncompliancePopup, setNoncompliancePopup] = useState({ open: false, late_dates: [], missed_dates: [] });
   const [filters, setFilters] = useState({
     scope_id: "",
     process_id: "",
@@ -849,6 +850,10 @@ function CommitmentMonitorTab() {
   };
 
   const closeUsersPopup = () => setUserPopup({ open: false, title: "", users: [] });
+  const openNoncompliancePopup = (late_dates, missed_dates) => {
+    setNoncompliancePopup({ open: true, late_dates, missed_dates });
+  };
+  const closeNoncompliancePopup = () => setNoncompliancePopup({ open: false, late_dates: [], missed_dates: [] });
 
   return (
     <div>
@@ -1019,7 +1024,23 @@ function CommitmentMonitorTab() {
                     {item.stats?.compliance_rate == null ? "—" : `${item.stats.compliance_rate}%`} ({item.stats?.on_time_days ?? 0}/{item.stats?.due_days ?? 0})
                   </td>
                   <td style={{ padding: "8px", verticalAlign: "top", color: "#991b1b", fontWeight: 600 }}>
-                    {(item.stats?.late_days ?? 0) + (item.stats?.missed_days ?? 0)}
+                    <button
+                      onClick={() => openNoncompliancePopup(item.stats?.late_dates || [], item.stats?.missed_dates || [])}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#991b1b",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {(() => {
+                        const late = item.stats?.late_days ?? 0;
+                        const missed = item.stats?.missed_days ?? 0;
+                        return `${late + missed} (${late} tardías, ${missed} faltantes)`;
+                      })()}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1072,6 +1093,73 @@ function CommitmentMonitorTab() {
                     {u}
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {noncompliancePopup.open && (
+        <div
+          onClick={closeNoncompliancePopup}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(17, 24, 39, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 60,
+            padding: "16px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(460px, 95vw)",
+              background: "white",
+              borderRadius: "10px",
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 20px 45px rgba(0, 0, 0, 0.2)",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderBottom: "1px solid #e5e7eb" }}>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: "#111827" }}>Detalles de Incumplimientos</div>
+              <button
+                type="button"
+                onClick={closeNoncompliancePopup}
+                style={{ border: "none", background: "transparent", color: "#6b7280", fontSize: "20px", lineHeight: 1, cursor: "pointer" }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ padding: "12px", maxHeight: "52vh", overflowY: "auto" }}>
+              {noncompliancePopup.late_dates.length === 0 && noncompliancePopup.missed_dates.length === 0 ? (
+                <div style={{ fontSize: "13px", color: "#9ca3af" }}>Sin incumplimientos.</div>
+              ) : (
+                <div>
+                  {noncompliancePopup.late_dates.length > 0 && (
+                    <div style={{ marginBottom: "12px" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", marginBottom: "6px" }}>Cargas tardías:</div>
+                      {noncompliancePopup.late_dates.map((date) => (
+                        <div key={date} style={{ fontSize: "12px", color: "#374151", padding: "4px 0" }}>
+                          {new Date(date).toLocaleDateString("es-ES")}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {noncompliancePopup.missed_dates.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", marginBottom: "6px" }}>Cargas faltantes:</div>
+                      {noncompliancePopup.missed_dates.map((date) => (
+                        <div key={date} style={{ fontSize: "12px", color: "#374151", padding: "4px 0" }}>
+                          {new Date(date).toLocaleDateString("es-ES")}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -1342,6 +1430,249 @@ function RoleTraceabilityTab() {
   );
 }
 
+function ResetTab({ onReset }) {
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState(null);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const token = localStorage.getItem("authToken");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API}/upload/`, { headers });
+        const data = await res.json();
+        const projectIds = [...new Set(data.map((p) => p.project_id).filter(Boolean))];
+        setProjects(projectIds);
+      } catch (e) {
+        console.error("Error loading projects:", e);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  const handleResetProject = async () => {
+    if (!selectedProjectId) {
+      setMessage("Por favor selecciona un proyecto");
+      return;
+    }
+    setResetConfirmation("project");
+  };
+
+  const handleResetAll = () => {
+    setResetConfirmation("all");
+  };
+
+  const confirmReset = async () => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const token = localStorage.getItem("authToken");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      if (resetConfirmation === "project") {
+        const res = await fetch(`${API}/admin/reset-project/${selectedProjectId}`, {
+          method: "DELETE",
+          headers,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setMessage(`✓ Proyecto "${selectedProjectId}" eliminado exitosamente`);
+          setSelectedProjectId("");
+          setResetConfirmation(null);
+          if (onReset) onReset();
+        } else {
+          setMessage(`Error: ${data.message || "Ocurrió un error"}`);
+        }
+      } else if (resetConfirmation === "all") {
+        const res = await fetch(`${API}/admin/reset-all`, {
+          method: "DELETE",
+          headers,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setMessage("✓ Toda la aplicación ha sido reiniciada exitosamente");
+          setResetConfirmation(null);
+          if (onReset) onReset();
+        } else {
+          setMessage(`Error: ${data.message || "Ocurrió un error"}`);
+        }
+      }
+    } catch (e) {
+      setMessage(`Error: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelReset = () => {
+    setResetConfirmation(null);
+  };
+
+  const buttonStyle = {
+    padding: "8px 16px",
+    borderRadius: "6px",
+    border: "1px solid #e5e7eb",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 500,
+  };
+
+  const selectStyle = {
+    padding: "8px 12px",
+    borderRadius: "6px",
+    border: "1px solid #e5e7eb",
+    fontSize: "13px",
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
+  return (
+    <div>
+      <div style={{ color: "#111827", marginBottom: "20px" }}>
+        <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: 700 }}>
+          Reiniciar Proyecto
+        </h3>
+        <p style={{ margin: "0 0 12px 0", fontSize: "12px", color: "#6b7280" }}>
+          Elimina todos los datos asociados a un proyecto específico.
+        </p>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            style={selectStyle}
+          >
+            <option value="">— Selecciona un proyecto —</option>
+            {projects.map((pid) => (
+              <option key={pid} value={pid}>
+                {pid}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleResetProject}
+            disabled={loading || !selectedProjectId}
+            style={{
+              ...buttonStyle,
+              background: "#fee2e2",
+              color: "#991b1b",
+              border: "1px solid #fecaca",
+              opacity: loading || !selectedProjectId ? 0.6 : 1,
+              cursor: loading || !selectedProjectId ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Eliminando..." : "Eliminar"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: "20px", marginTop: "20px" }}>
+        <h3 style={{ margin: "0 0 8px 0", fontSize: "14px", fontWeight: 700, color: "#111827" }}>
+          Reiniciar Aplicación Completa
+        </h3>
+        <p style={{ margin: "0 0 12px 0", fontSize: "12px", color: "#6b7280" }}>
+          Elimina TODOS los datos de la aplicación (proyectos, archivos, ejecuciones, etc).
+          Esta acción no se puede deshacer.
+        </p>
+        <button
+          onClick={handleResetAll}
+          disabled={loading}
+          style={{
+            ...buttonStyle,
+            background: "#dc2626",
+            color: "white",
+            border: "1px solid #991b1b",
+            opacity: loading ? 0.6 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Eliminando..." : "🔴 Eliminar TODO"}
+        </button>
+      </div>
+
+      {/* Confirmation Modal */}
+      {resetConfirmation && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "8px",
+              padding: "24px",
+              maxWidth: "400px",
+              boxShadow: "0 20px 25px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h3 style={{ margin: "0 0 12px 0", color: "#dc2626", fontSize: "16px", fontWeight: 700 }}>
+              ⚠️ Confirmar eliminación
+            </h3>
+            <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#374151", lineHeight: "1.5" }}>
+              {resetConfirmation === "project"
+                ? `¿Estás seguro de que deseas eliminar todos los datos del proyecto "${selectedProjectId}"? Esta acción no se puede deshacer.`
+                : "¿Estás seguro de que deseas eliminar TODOS los datos de la aplicación? Esta acción no se puede deshacer y perderás todos los proyectos, archivos, ejecuciones y suscripciones."}
+            </p>
+            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+              <button
+                onClick={cancelReset}
+                disabled={loading}
+                style={{
+                  ...buttonStyle,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmReset}
+                disabled={loading}
+                style={{
+                  ...buttonStyle,
+                  background: "#dc2626",
+                  color: "white",
+                  border: "1px solid #991b1b",
+                }}
+              >
+                {loading ? "Procesando..." : "Sí, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {message && (
+        <div
+          style={{
+            marginTop: "16px",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            fontSize: "13px",
+            background: message.includes("✓") ? "#d1fae5" : "#fee2e2",
+            color: message.includes("✓") ? "#065f46" : "#991b1b",
+            border: `1px solid ${message.includes("✓") ? "#86efac" : "#fecaca"}`,
+          }}
+        >
+          {message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPanel({ onBack }) {
   const [activeSection, setActiveSection] = useState("roles");
   const [activeTab, setActiveTab] = useState("monitor");
@@ -1374,6 +1705,13 @@ export default function AdminPanel({ onBack }) {
         { id: "subscriptions", label: "Suscripciones" },
         { id: "jobs", label: "Jobs de entrega" },
         { id: "debug", label: "🔍 Debug" },
+      ],
+    },
+    {
+      id: "maintenance",
+      label: "Mantenimiento",
+      tabs: [
+        { id: "reset", label: "🔄 Reiniciar" },
       ],
     },
   ];
@@ -1467,6 +1805,7 @@ export default function AdminPanel({ onBack }) {
         {activeTab === "traceability" && <RoleTraceabilityTab />}
         {activeTab === "jobs" && <DeliveryJobsTab />}
         {activeTab === "debug" && <DebugTab />}
+        {activeTab === "reset" && <ResetTab onReset={loadSummary} />}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ const STATUS_COLOR = {
   sin_regla: "#d1d5db",
   raw_only: "#0ea5e9",
   compromiso_vencido: "#8b5cf6",
+  missed: "#6b7280",
 };
 
 const STATUS_LABEL = {
@@ -16,6 +17,7 @@ const STATUS_LABEL = {
   sin_regla: "Sin regla",
   raw_only: "Solo mover crudo",
   compromiso_vencido: "Compromiso vencido",
+  missed: "Carga faltante",
 };
 
 export default function Executions({ executions, onSelect }) {
@@ -80,6 +82,9 @@ export default function Executions({ executions, onSelect }) {
                 <div className="execution-file">
                   {exec.file_name || exec.latest_input_name}
                 </div>
+                <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                  {label}
+                </div>
                 <div className="execution-meta">
                   <span>{formatTimestamp(exec.timestamp)}</span>
                   <span className="execution-divider">•</span>
@@ -91,13 +96,15 @@ export default function Executions({ executions, onSelect }) {
                   </span>
                 </div>
               </div>
-              <button
-                className="execution-open-btn"
-                onClick={() => onSelect(exec)}
-                title="Ver resultado"
-              >
-                Ver
-              </button>
+              {exec.status !== "missed" && (
+                <button
+                  className="execution-open-btn"
+                  onClick={() => onSelect(exec)}
+                  title="Ver resultado"
+                >
+                  Ver
+                </button>
+              )}
             </div>
           );
         })}

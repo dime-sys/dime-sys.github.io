@@ -40,7 +40,7 @@ class LocalSink(BaseSink):
 
     def __init__(self, config: dict):
         self.base_path = config.get("base_path") or os.path.join(
-            os.path.dirname(__file__), "../../../../output_delivery"
+            os.path.dirname(__file__), "../../../output_delivery"
         )
 
     def write(self, contract: OutputContract, df: pd.DataFrame) -> ArtifactResult:

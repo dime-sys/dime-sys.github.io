@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null, refreshKey = 0, currentUser = null }) => {
   const [projects, setProjects] = useState([]);
@@ -41,7 +41,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const loadProjects = async () => {
     try {
-      const response = await fetch('http://localhost:8000/projects/');
+      const response = await fetch('http://localhost:8000/projects/', { headers: authHeaders() });
       const data = await response.json();
       const loadedProjects = data.projects || [];
       setProjects(loadedProjects);
@@ -94,6 +94,27 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
     return siblings.some((n) => n.id !== excludeId && normalizeName(n.name) === target);
   };
+
+  // For responsable: only show nodes they are assigned to + their ancestors
+  const displayProjects = useMemo(() => {
+    if (role !== 'responsable') return projects;
+    const assignedIds = new Set(currentUser?.assigned_project_ids || []);
+    if (assignedIds.size === 0) return [];
+
+    const nodeIsRelevant = (node) => {
+      if (assignedIds.has(node.id)) return true;
+      return (node.children || []).some(nodeIsRelevant);
+    };
+
+    const pruneNode = (node) => {
+      if (assignedIds.has(node.id)) return node;
+      const relevantChildren = (node.children || []).filter(nodeIsRelevant).map(pruneNode);
+      if (relevantChildren.length === 0) return null;
+      return { ...node, children: relevantChildren };
+    };
+
+    return projects.filter(nodeIsRelevant).map(pruneNode).filter(Boolean);
+  }, [projects, role, currentUser?.assigned_project_ids]);
 
   const createNameConflict = (() => {
     if (creating === null) return false;
@@ -662,14 +683,14 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
         )}
 
         <div className="nodes-list">
-          {projects.length === 0 ? (
+          {displayProjects.length === 0 ? (
             <div className="empty-state">
               {canCreateRoot
                 ? 'No hay proyectos. Crea uno nuevo para comenzar.'
                 : 'No tienes proyectos asignados.'}
             </div>
           ) : (
-            projects.map(project => (
+            displayProjects.map(project => (
               <TreeNode key={project.id} node={project} />
             ))
           )}

@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from datetime import datetime
 
 from app.routes import upload, rules, config, projects, admin, auth, users
 
 app = FastAPI()
+
+# Version ID changes on each app restart
+_APP_START_TIME = datetime.now().isoformat()
 
 # CORS origins can be overridden with CORS_ORIGINS="http://localhost,http://localhost:5173"
 cors_origins_env = os.getenv("CORS_ORIGINS")
@@ -27,6 +31,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Version endpoint (no auth required)
+@app.get("/version")
+def get_app_version():
+    return {"version": _APP_START_TIME}
 
 # Routers
 app.include_router(upload.router, prefix="/upload", tags=["upload"])
