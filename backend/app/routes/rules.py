@@ -440,24 +440,84 @@ def get_executions_by_file(file_id: str, sheet_name: str = Query(default=None)):
     if sheet_name:
         executions = [e for e in executions if e.get("sheet_name") == sheet_name]
 
-    # Add missed executions
-    from app.routes.admin import _build_process_monitor_row
+    from app.routes.admin import (
+        _build_process_monitor_row,
+        _normalized_schedule_ranges,
+        _schedule_applies_on_date,
+        _windows_for_date,
+        _parse_iso_local,
+    )
+
+    _SCL = ZoneInfo("America/Santiago")
+
+    def _schedule_at_time(ts_str: str):
+        """Return the commitment schedule active at the given ISO timestamp."""
+        try:
+            ts = _parse_iso_local(ts_str)
+            if not ts:
+                return None
+            history = sorted(
+                process_record.get("commitment_history", []) or [],
+                key=lambda h: h.get("valid_until", ""),
+            )
+            for h in history:
+                valid_until = _parse_iso_local(h.get("valid_until", ""))
+                if valid_until and ts < valid_until:
+                    return h.get("schedule")
+            return process_record.get("commitment_schedule")
+        except Exception:
+            return None
+
+    def _exec_in_range(ts_str: str) -> bool:
+        """Return True if the timestamp falls within any committed range window."""
+        try:
+            sched = _schedule_at_time(ts_str)
+            if not sched or not sched.get("activo"):
+                return True
+            ts = _parse_iso_local(ts_str)
+            if not ts:
+                return True
+            day_dt = ts.replace(hour=0, minute=0, second=0, microsecond=0)
+            if not _schedule_applies_on_date(sched, day_dt):
+                return True
+            windows = _windows_for_date(sched, day_dt)
+            return any(w_start <= ts <= w_end for w_start, w_end in windows)
+        except Exception:
+            return True
+
+    # Enrich real executions with in_range flag
+    enriched = []
+    for e in executions:
+        e = dict(e)
+        e["in_range"] = _exec_in_range(e.get("timestamp", ""))
+        enriched.append(e)
+
+    # Add missed executions as compromiso_vencido records
     monitor_data = _build_process_monitor_row(
         file_id,
         process_record,
-        datetime.now(ZoneInfo("America/Santiago")),
+        datetime.now(_SCL),
     )
     missed_dates = monitor_data.get("stats", {}).get("missed_dates", [])
-    for date_str in missed_dates:
-        executions.append({
-            "timestamp": date_str + "T00:00:00",  # approximate
-            "uploaded_by": "Sistema",
-            "status": "missed",
-            "file_name": "Carga faltante",
+    for item in missed_dates:
+        date_str = item["date"] if isinstance(item, dict) else item
+        ranges = item.get("ranges", []) if isinstance(item, dict) else []
+        # Use end of first range as timestamp if available
+        if ranges:
+            end_time = ranges[-1]["hora_fin"]
+            timestamp = f"{date_str}T{end_time}:00"
+        else:
+            timestamp = date_str + "T23:59:00"
+        enriched.append({
+            "timestamp": timestamp,
+            "uploaded_by": "—",
+            "status": "compromiso_vencido",
+            "file_name": "Sin carga",
+            "in_range": False,
         })
 
-    executions.sort(key=lambda e: e["timestamp"])
-    return executions
+    enriched.sort(key=lambda e: e["timestamp"])
+    return enriched
 
 
 @router.get("/rule-history/{file_id}")
