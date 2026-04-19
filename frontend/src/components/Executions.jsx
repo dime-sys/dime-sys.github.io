@@ -3,10 +3,13 @@ const STATUS_COLOR = {
   warning: "#f59e0b",
   error: "#ef4444",
   error_formato: "#ef4444",
-  sin_regla: "#d1d5db",
+  sin_regla: "#ffffff",
   raw_only: "#0ea5e9",
   compromiso_vencido: "#8b5cf6",
   missed: "#6b7280",
+};
+const STATUS_BORDER_COLOR = {
+  sin_regla: "#d1d5db",
 };
 
 const STATUS_LABEL = {
@@ -51,7 +54,8 @@ export default function Executions({ executions, onSelect }) {
             ? new Date(exec.timestamp).toLocaleString("es-ES", { timeZone: "America/Santiago", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
             : "";
           const outOfRange = exec.in_range === false && exec.status !== "compromiso_vencido" && exec.status !== "missed";
-          const ringColor = outOfRange ? "#8b5cf6" : color;
+          const defaultRing = STATUS_BORDER_COLOR[exec.status] || color;
+          const ringColor = outOfRange ? "#8b5cf6" : defaultRing;
           const dotTooltip = [
             `usuario: ${uploadedBy}`,
             `fecha_carga: ${ts || "sin fecha"}`,

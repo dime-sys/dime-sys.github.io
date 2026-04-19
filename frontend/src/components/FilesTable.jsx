@@ -270,7 +270,8 @@ function ProcessTimeline({ file, feedbackInfo }) {
     const hasSched = execSched?.activo;
     const isError = e.status === "error" || e.status === "error_formato";
     const bgColor = isError ? "#ef4444" : e.status === "success" ? "#22c55e" : (STATUS_COLOR[e.status] || "#d1d5db");
-    const borderColor = hasSched && !inStripe ? "#8b5cf6" : bgColor;
+    const defaultBorder = STATUS_BORDER_COLOR[e.status] || bgColor;
+    const borderColor = hasSched && !inStripe ? "#8b5cf6" : defaultBorder;
     const label = STATUS_LABEL[e.status] || e.status;
     const tooltip = [
       `${e.uploaded_by || "user_x"} · ${fmtScl(e.timestamp)}`,
@@ -464,9 +465,12 @@ const STATUS_COLOR = {
   warning: "#f59e0b",
   error: "#ef4444",
   error_formato: "#ef4444",
-  sin_regla: "#d1d5db",
+  sin_regla: "#ffffff",
   raw_only: "#0ea5e9",
   compromiso_vencido: "#8b5cf6",
+};
+const STATUS_BORDER_COLOR = {
+  sin_regla: "#d1d5db",
 };
 
 const STATUS_LABEL = {
