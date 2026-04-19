@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { uploadFileToProject, getProjects, getMe, logout } from "./services/api";
+
+const API = "/api";
 import "./App.css";
 import AdminPanel from "./components/AdminPanel";
 import ProjectSetupWizard from "./components/ProjectSetupWizard";
@@ -126,7 +128,7 @@ function App() {
   useEffect(() => {
     const checkAppVersion = async () => {
       try {
-        const response = await fetch("http://localhost:8000/version");
+        const response = await fetch(`${API}/version`);
         const data = await response.json();
         const currentVersion = data.version;
         const storedVersion = localStorage.getItem("appVersion");
@@ -197,7 +199,7 @@ function App() {
     const token = localStorage.getItem("authToken");
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-    fetch(`http://localhost:8000/upload/?project_id=${encodeURIComponent(projectId)}`, { headers })
+    fetch(`${API}/upload/?project_id=${encodeURIComponent(projectId)}`, { headers })
       .then((r) => r.json())
       .then((list) => {
         const names = Array.isArray(list)
@@ -243,7 +245,7 @@ function App() {
     const params = new URLSearchParams();
     if (sheetName) params.set("sheet_name", sheetName);
     params.set("preview_rows", String(rowCount));
-    const url = `http://localhost:8000/upload/${processId}?${params.toString()}`;
+    const url = `${API}/upload/${processId}?${params.toString()}`;
     const res = await fetch(url);
     const data = await res.json();
 
@@ -281,7 +283,7 @@ function App() {
       const backendData = res.data;
 
       // Obtener los datos completos del archivo (incluye preview)
-      const fileDataRes = await fetch(`http://localhost:8000/upload/${backendData.file_id}`);
+      const fileDataRes = await fetch(`${API}/upload/${backendData.file_id}`);
       const fileData = await fileDataRes.json();
 
       setData(fileData);
@@ -376,7 +378,7 @@ function App() {
 
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch("http://localhost:8000/rules/bulk", {
+      const res = await fetch(`${API}/rules/bulk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -417,9 +419,9 @@ function App() {
     if (!processId) return;
 
     const [executionsRes, ruleHistoryRes, processRes] = await Promise.all([
-      fetch(`http://localhost:8000/rules/executions/${processId}`),
-      fetch(`http://localhost:8000/rules/rule-history/${processId}`),
-      fetch(`http://localhost:8000/upload/${processId}`),
+      fetch(`${API}/rules/executions/${processId}`),
+      fetch(`${API}/rules/rule-history/${processId}`),
+      fetch(`${API}/upload/${processId}`),
     ]);
 
     const [executionsData, ruleHistoryData, processData] = await Promise.all([
@@ -448,7 +450,7 @@ function App() {
 
   const updateEnabledSheets = async (sheetNames) => {
     if (!currentFile?.id) return;
-    const res = await fetch(`http://localhost:8000/upload/${currentFile.id}/sheet-selection`, {
+    const res = await fetch(`${API}/upload/${currentFile.id}/sheet-selection`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -467,7 +469,7 @@ function App() {
   };
 
   const clearHistory = async () => {
-    await fetch("http://localhost:8000/rules/executions", {
+    await fetch(`${API}/rules/executions`, {
       method: "DELETE",
     });
 

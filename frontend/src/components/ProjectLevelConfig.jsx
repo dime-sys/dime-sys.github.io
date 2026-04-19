@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, X } from 'lucide-react';
 
-const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+const API = "/api";
 
 const ProjectLevelConfig = ({ onClose, onSave }) => {
   const [maxLevels, setMaxLevels] = useState(4);

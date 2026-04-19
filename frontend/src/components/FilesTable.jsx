@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import ScheduleRangeEditor from "./ScheduleRangeEditor";
 
-const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+const API = "/api";
 
 const metadataLabels = {
   responsable: "Responsable",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
-const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+const API = "/api";
 
 const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null, refreshKey = 0, currentUser = null }) => {
   const [projects, setProjects] = useState([]);
