@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, X } from 'lucide-react';
 
+const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+
 const ProjectLevelConfig = ({ onClose, onSave }) => {
   const [maxLevels, setMaxLevels] = useState(4);
   const [levelNames, setLevelNames] = useState(['Compañía', 'Área', 'Departamento', 'Proyecto']);
@@ -13,7 +15,7 @@ const ProjectLevelConfig = ({ onClose, onSave }) => {
 
   const loadConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8000/config/project-levels');
+      const response = await fetch(`${API}/config/project-levels`);
       const data = await response.json();
       setMaxLevels(data.max_levels || 4);
       setLevelNames(data.level_names || ['Compañía', 'Área', 'Departamento', 'Proyecto']);
@@ -50,7 +52,7 @@ const ProjectLevelConfig = ({ onClose, onSave }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch('http://localhost:8000/config/project-levels', {
+      const response = await fetch(`${API}/config/project-levels`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

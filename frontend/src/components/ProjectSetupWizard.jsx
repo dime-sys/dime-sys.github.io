@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+
 const ProjectSetupWizard = ({ onSetupComplete, onCancel }) => {
   const [step, setStep] = useState(1);
   const [numLevels, setNumLevels] = useState(3);
@@ -81,7 +83,7 @@ const ProjectSetupWizard = ({ onSetupComplete, onCancel }) => {
     setLoading(true);
     try {
       // 1. Guardar configuración de niveles
-      const configResponse = await fetch('http://localhost:8000/config/project-levels', {
+      const configResponse = await fetch(`${API}/config/project-levels`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -99,7 +101,7 @@ const ProjectSetupWizard = ({ onSetupComplete, onCancel }) => {
       }
 
       // 2. Crear proyecto inicial
-      const projectResponse = await fetch(`http://localhost:8000/projects/?name=${encodeURIComponent(projectName)}`, {
+      const projectResponse = await fetch(`${API}/projects/?name=${encodeURIComponent(projectName)}`, {
         method: 'POST'
       });
 
