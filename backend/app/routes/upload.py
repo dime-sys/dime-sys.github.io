@@ -774,8 +774,6 @@ async def upload_process_instance(
     if now_dt.tzinfo is None:
         now_dt = now_dt.replace(tzinfo=_SCL)
     commitment_state = _commitment_state_for_upload(record.get("commitment_schedule"), now_dt)
-    if commitment_state == "late":
-        overall_status = "compromiso_vencido"
     representative_result = next(
         (output.get("result") for output in outputs if output.get("status") == "success" and output.get("result")),
         outputs[0].get("result", []),

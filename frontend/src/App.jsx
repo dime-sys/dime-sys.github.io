@@ -1082,7 +1082,7 @@ function App() {
               {selectedExecution && (
                 <div className="workspace-card history-result-card" style={{ marginTop: "2px" }}>
                   <div className="workspace-title" style={{ marginBottom: "8px" }}>
-                    Resultado de la ejecución · {selectedExecution.status === "warning" ? "Con errores" : "Correcto"}
+                    Resultado de la ejecución · {selectedExecution.status === "warning" ? "Con errores" : selectedExecution.status === "error" || selectedExecution.status === "error_formato" ? "Error" : "Correcto"}
                   </div>
                   {Array.isArray(selectedExecution.outputs) && selectedExecution.outputs.length > 0 ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
