@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
+const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+
 const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null, refreshKey = 0, currentUser = null }) => {
   const [projects, setProjects] = useState([]);
   const [config, setConfig] = useState({ max_levels: 5, level_names: [] });
@@ -41,7 +43,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const loadProjects = async () => {
     try {
-      const response = await fetch('http://localhost:8000/projects/', { headers: authHeaders() });
+      const response = await fetch(`${API}/projects/`, { headers: authHeaders() });
       const data = await response.json();
       const loadedProjects = data.projects || [];
       setProjects(loadedProjects);
@@ -55,7 +57,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
 
   const loadConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8000/config/project-levels');
+      const response = await fetch(`${API}/config/project-levels`);
       const data = await response.json();
       setConfig(data);
     } catch (error) {
@@ -137,7 +139,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
     }
     try {
       const response = await fetch(
-        `http://localhost:8000/projects/?name=${encodeURIComponent(newName)}&parent_id=${parentId || ''}`,
+        `${API}/projects/?name=${encodeURIComponent(newName)}&parent_id=${parentId || ''}`,
         { method: 'POST', headers: authHeaders() }
       );
       const data = await response.json();
@@ -157,7 +159,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
   const deleteProject = async (projectId) => {
     if (!confirm('¿Eliminar este nodo y todos sus subniveles?')) return;
     try {
-      const response = await fetch(`http://localhost:8000/projects/${projectId}`, {
+      const response = await fetch(`${API}/projects/${projectId}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
@@ -177,7 +179,7 @@ const ProjectTree = ({ onSelectProject, onConfigLevels, selectedProjectId = null
     }
     try {
       const response = await fetch(
-        `http://localhost:8000/projects/${projectId}?name=${encodeURIComponent(editName)}`,
+        `${API}/projects/${projectId}?name=${encodeURIComponent(editName)}`,
         { method: 'PUT', headers: authHeaders() }
       );
       const data = await response.json();

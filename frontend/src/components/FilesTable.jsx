@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import ScheduleRangeEditor from "./ScheduleRangeEditor";
 
+const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+
 const metadataLabels = {
   responsable: "Responsable",
   area: "Área",
@@ -610,8 +612,8 @@ export default function FilesTable({ onSelectFile, onViewHistory, selectedProjec
   const loadFiles = async () => {
     try {
       const url = selectedProjectId
-        ? `http://localhost:8000/upload/?project_id=${encodeURIComponent(selectedProjectId)}`
-        : "http://localhost:8000/upload/";
+        ? `${API}/upload/?project_id=${encodeURIComponent(selectedProjectId)}`
+        : `${API}/upload/`;
 
       const token = localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -636,7 +638,7 @@ export default function FilesTable({ onSelectFile, onViewHistory, selectedProjec
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/upload/${fileId}`, {
+      const res = await fetch(`${API}/upload/${fileId}`, {
         method: "DELETE",
       });
 
@@ -660,7 +662,7 @@ export default function FilesTable({ onSelectFile, onViewHistory, selectedProjec
       formData.append("file", file);
       const token = localStorage.getItem("authToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(`http://localhost:8000/upload/${processId}/instance`, {
+      const res = await fetch(`${API}/upload/${processId}/instance`, {
         method: "POST",
         headers,
         body: formData,
@@ -1122,7 +1124,7 @@ export default function FilesTable({ onSelectFile, onViewHistory, selectedProjec
                 onClick={async () => {
                   if (editProcessNameConflict) return;
                   try {
-                    const res = await fetch(`http://localhost:8000/upload/${editingFile.id}`, {
+                    const res = await fetch(`${API}/upload/${editingFile.id}`, {
                       method: "PUT",
                       headers: {
                         "Content-Type": "application/json"
