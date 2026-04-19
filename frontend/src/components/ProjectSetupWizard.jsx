@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API = import.meta.env.DEV ? "http://localhost:8000" : "/api";
+const API = "/api";
 
 const ProjectSetupWizard = ({ onSetupComplete, onCancel }) => {
   const [step, setStep] = useState(1);

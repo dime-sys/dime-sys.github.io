@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-const API = "http://localhost:8000";
+const API = "/api";
 
 const PROVIDERS = ["local", "azure_blob", "gcs", "s3"];
 const SCOPE_TYPES = ["global", "folder", "process"];
