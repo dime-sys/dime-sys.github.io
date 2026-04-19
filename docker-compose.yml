@@ -35,7 +35,9 @@ services:
       - ./output_delivery:/app/output_delivery
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: app_frontend
     ports:
       - "80:80"
