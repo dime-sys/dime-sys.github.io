@@ -1142,21 +1142,41 @@ function CommitmentMonitorTab() {
                   {noncompliancePopup.late_dates.length > 0 && (
                     <div style={{ marginBottom: "12px" }}>
                       <div style={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", marginBottom: "6px" }}>Cargas tardías:</div>
-                      {noncompliancePopup.late_dates.map((date) => (
-                        <div key={date} style={{ fontSize: "12px", color: "#374151", padding: "4px 0" }}>
-                          {new Date(date).toLocaleDateString("es-ES")}
-                        </div>
-                      ))}
+                      {noncompliancePopup.late_dates.map((item, i) => {
+                        const date = typeof item === "string" ? item : item.date;
+                        const ranges = typeof item === "object" ? (item.ranges || []) : [];
+                        const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                        return (
+                          <div key={i} style={{ fontSize: "12px", color: "#374151", padding: "4px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span>{dateLabel}</span>
+                            {ranges.length > 0 && (
+                              <span style={{ fontSize: "11px", color: "#6b7280", background: "#f3f4f6", borderRadius: "4px", padding: "1px 6px" }}>
+                                {ranges.map(r => `${r.hora_inicio}–${r.hora_fin}`).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {noncompliancePopup.missed_dates.length > 0 && (
                     <div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#dc2626", marginBottom: "6px" }}>Cargas faltantes:</div>
-                      {noncompliancePopup.missed_dates.map((date) => (
-                        <div key={date} style={{ fontSize: "12px", color: "#374151", padding: "4px 0" }}>
-                          {new Date(date).toLocaleDateString("es-ES")}
-                        </div>
-                      ))}
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: "#8b5cf6", marginBottom: "6px" }}>Cargas faltantes:</div>
+                      {noncompliancePopup.missed_dates.map((item, i) => {
+                        const date = typeof item === "string" ? item : item.date;
+                        const ranges = typeof item === "object" ? (item.ranges || []) : [];
+                        const dateLabel = new Date(date + "T12:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                        return (
+                          <div key={i} style={{ fontSize: "12px", color: "#374151", padding: "4px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span>{dateLabel}</span>
+                            {ranges.length > 0 && (
+                              <span style={{ fontSize: "11px", color: "#6b7280", background: "#f3f4f6", borderRadius: "4px", padding: "1px 6px" }}>
+                                {ranges.map(r => `${r.hora_inicio}–${r.hora_fin}`).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

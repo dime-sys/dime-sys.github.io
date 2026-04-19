@@ -236,12 +236,14 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
                 on_time_users[who] = on_time_users.get(who, 0) + 1
             elif day_execs:
                 stats["late_days"] += 1
-                stats["late_dates"].append(day.date().isoformat())
+                _ranges = [{"hora_inicio": r["hora_inicio"], "hora_fin": r["hora_fin"]} for r in _normalized_schedule_ranges(schedule)]
+                stats["late_dates"].append({"date": day.date().isoformat(), "ranges": _ranges})
                 who = day_execs[0]["uploaded_by"]
                 late_users[who] = late_users.get(who, 0) + 1
             else:
                 stats["missed_days"] += 1
-                stats["missed_dates"].append(day.date().isoformat())
+                _ranges = [{"hora_inicio": r["hora_inicio"], "hora_fin": r["hora_fin"]} for r in _normalized_schedule_ranges(schedule)]
+                stats["missed_dates"].append({"date": day.date().isoformat(), "ranges": _ranges})
             day += timedelta(days=1)
 
     compliance_rate = (

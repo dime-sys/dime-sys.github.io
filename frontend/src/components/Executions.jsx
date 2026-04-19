@@ -50,11 +50,14 @@ export default function Executions({ executions, onSelect }) {
           const ts = exec.timestamp
             ? new Date(exec.timestamp).toLocaleString("es-ES", { timeZone: "America/Santiago", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
             : "";
+          const outOfRange = exec.in_range === false && exec.status !== "compromiso_vencido" && exec.status !== "missed";
+          const ringColor = outOfRange ? "#8b5cf6" : color;
           const dotTooltip = [
             `usuario: ${uploadedBy}`,
             `fecha_carga: ${ts || "sin fecha"}`,
             `estado: ${label}`,
-          ].join("\n");
+            outOfRange ? "⚠ Fuera del rango comprometido" : "",
+          ].filter(Boolean).join("\n");
 
           return (
             <div key={index} className="execution-item">
@@ -74,7 +77,7 @@ export default function Executions({ executions, onSelect }) {
                     height: "10px",
                     borderRadius: "50%",
                     background: color,
-                    boxShadow: `0 0 0 2px #fff, 0 0 0 3px ${color}`,
+                    boxShadow: `0 0 0 2px #fff, 0 0 0 3px ${ringColor}`,
                   }}
                 />
               </span>
