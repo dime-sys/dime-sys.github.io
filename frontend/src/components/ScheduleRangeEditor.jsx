@@ -255,7 +255,7 @@ export default function ScheduleRangeEditor({
         <span>23:59</span>
       </div>
 
-      <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))", gap: "6px" }}>
+      <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "12px" }}>
         {safeRanges.map((r, idx) => {
           const mins = toMinutes(r.hora_fin) - toMinutes(r.hora_inicio);
           const durH = Math.floor(mins / 60);
@@ -285,8 +285,11 @@ export default function ScheduleRangeEditor({
           };
 
           const inputStyle = (invalid) => ({
-            width: "62px",
-            padding: "2px 5px",
+            width: "100%",
+            minWidth: "180px",
+            maxWidth: "240px",
+            flex: "1 1 180px",
+            padding: "6px 8px",
             border: `1px solid ${invalid ? "#f87171" : "#c4b5fd"}`,
             borderRadius: "5px",
             fontSize: "11px",
@@ -294,6 +297,7 @@ export default function ScheduleRangeEditor({
             color: "#1e1b4b",
             background: invalid ? "#fef2f2" : "white",
             outline: "none",
+            boxSizing: "border-box",
           });
 
           const startInvalid = localInputs[startKey] !== undefined && !isValidHHMM(localInputs[startKey]);
@@ -302,7 +306,7 @@ export default function ScheduleRangeEditor({
           return (
             <div key={`legend-${idx}`} style={{ border: "1px solid #e9d5ff", background: "#faf5ff", borderRadius: "7px", padding: "6px 8px" }}>
               <div style={{ fontSize: "10px", fontWeight: 700, color: "#6d28d9", marginBottom: "4px" }}>Rango {idx + 1}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "11px", color: "#374151", width: "32px", flexShrink: 0 }}>Inicio</span>
                 <input
                   type="time"
@@ -314,7 +318,7 @@ export default function ScheduleRangeEditor({
                   title="Hora de inicio (HH:MM)"
                 />
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "3px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "11px", color: "#374151", width: "32px", flexShrink: 0 }}>Fin</span>
                 <input
                   type="time"

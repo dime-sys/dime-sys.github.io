@@ -122,6 +122,32 @@ function App() {
     criticidad: ""
   });
 
+  // Validate app version and clear cache if backend restarted
+  useEffect(() => {
+    const checkAppVersion = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/version");
+        const data = await response.json();
+        const currentVersion = data.version;
+        const storedVersion = localStorage.getItem("appVersion");
+
+        if (storedVersion && storedVersion !== currentVersion) {
+          // App restarted, clear all caches
+          console.log("App restarted detected. Clearing cache...");
+          localStorage.clear();
+          sessionStorage.clear();
+        }
+
+        // Store the current version
+        localStorage.setItem("appVersion", currentVersion);
+      } catch (error) {
+        console.error("Failed to check app version:", error);
+      }
+    };
+
+    checkAppVersion();
+  }, []);
+
   // Validate stored token on mount
   useEffect(() => {
     const token = localStorage.getItem("authToken");

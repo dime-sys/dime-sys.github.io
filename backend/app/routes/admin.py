@@ -119,6 +119,11 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
     from app.db.user_store import USERS_DB
     from app.routes.rules import _get_folder_ids
 
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=_SCL)
+    else:
+        now = now.astimezone(_SCL)
+
     schedule = record.get("commitment_schedule") or {}
     active_schedule = bool(schedule.get("activo"))
     folder_ids = _get_folder_ids(record.get("project_id")) or []
@@ -188,6 +193,8 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
         "on_time_days": 0,
         "late_days": 0,
         "missed_days": 0,
+        "late_dates": [],
+        "missed_dates": [],
     }
     on_time_users = {}
     late_users = {}
@@ -229,10 +236,12 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
                 on_time_users[who] = on_time_users.get(who, 0) + 1
             elif day_execs:
                 stats["late_days"] += 1
+                stats["late_dates"].append(day.date().isoformat())
                 who = day_execs[0]["uploaded_by"]
                 late_users[who] = late_users.get(who, 0) + 1
             else:
                 stats["missed_days"] += 1
+                stats["missed_dates"].append(day.date().isoformat())
             day += timedelta(days=1)
 
     compliance_rate = (
@@ -910,3 +919,95 @@ def redispatch_execution(execution_id: str):
         "sheet_name": sheet_name,
         "dispatch_results": dispatch_results,
     }
+
+
+# ───────────────────────────────────────────────
+# Reset endpoints
+# ───────────────────────────────────────────────
+
+@router.delete("/reset-project/{project_id}")
+def reset_project(project_id: str, authorization: Optional[str] = Header(None)):
+    """Delete all data related to a specific project (files, executions, rules)."""
+    from app.routes.auth import _get_user_by_token
+    from app.routes.upload import FILES_DB, save_files_state
+    from app.routes.rules import EXECUTIONS_DB, save_executions_state
+    from app.routes.projects import PROJECTS_DB, save_projects_state
+    
+    caller = _get_user_by_token(authorization)
+    if caller.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden resetear proyectos")
+
+    # Delete project folder structure
+    if project_id in PROJECTS_DB:
+        del PROJECTS_DB[project_id]
+        save_projects_state()
+
+    # Delete all files/executions in this project
+    files_to_delete = [f_id for f_id, f_rec in FILES_DB.items() if f_rec.get("project_id") == project_id]
+    for f_id in files_to_delete:
+        del FILES_DB[f_id]
+    if files_to_delete:
+        save_files_state()
+
+    # Delete executions for files in this project
+    execs_to_delete = [e for e in EXECUTIONS_DB if e.get("process_id") in files_to_delete]
+    for e in execs_to_delete:
+        EXECUTIONS_DB.remove(e)
+    if execs_to_delete:
+        save_executions_state()
+
+    return {"status": "ok", "message": f"Proyecto {project_id} reseteado completamente"}
+
+
+@router.delete("/reset-all")
+def reset_all_data(authorization: Optional[str] = Header(None)):
+    """Completely reset the application (DELETE ALL DATA except current admin user)."""
+    from app.routes.auth import _get_user_by_token
+    from app.routes.upload import FILES_DB, save_files_state
+    from app.routes.rules import EXECUTIONS_DB, save_executions_state
+    from app.routes.projects import PROJECTS_DB, save_projects_state
+    from app.db.user_store import USERS_DB, SESSIONS_DB, PENDING_USERS_DB, save_users_state, save_sessions_state, save_pending_users_state
+    from app.db.output_store import SUBSCRIPTIONS_DB, DELIVERY_JOBS_DB, ARTIFACTS_DB, save_subscriptions_state, save_delivery_jobs_state, save_artifacts_state
+    
+    caller = _get_user_by_token(authorization)
+    if caller.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo administradores pueden resetear la aplicación")
+
+    admin_user_id = caller.get("id")
+
+    # Clear projects
+    PROJECTS_DB.clear()
+    save_projects_state()
+
+    # Clear files and executions
+    FILES_DB.clear()
+    save_files_state()
+
+    EXECUTIONS_DB.clear()
+    save_executions_state()
+
+    # Clear users (except current admin)
+    keep_users = {admin_user_id: USERS_DB.get(admin_user_id)} if admin_user_id in USERS_DB else {}
+    USERS_DB.clear()
+    USERS_DB.update(keep_users)
+    save_users_state()
+
+    # Keep current session
+    SESSIONS_DB.clear()
+    save_sessions_state()
+
+    # Clear pending users
+    PENDING_USERS_DB.clear()
+    save_pending_users_state()
+
+    # Clear delivery module
+    SUBSCRIPTIONS_DB.clear()
+    save_subscriptions_state()
+
+    DELIVERY_JOBS_DB.clear()
+    save_delivery_jobs_state()
+
+    ARTIFACTS_DB.clear()
+    save_artifacts_state()
+
+    return {"status": "ok", "message": "Aplicación reseteada completamente"}

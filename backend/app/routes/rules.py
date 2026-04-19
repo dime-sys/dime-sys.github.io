@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Body, Query, Header
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import uuid
 from typing import Optional
 
@@ -435,9 +436,29 @@ def get_executions_by_file(file_id: str, sheet_name: str = Query(default=None)):
     process_record = get_process(file_id)
     if not process_record:
         return []
-    executions = process_record.get("executions", [])
+    executions = list(process_record.get("executions", []) or [])
+    if isinstance(sheet_name, Query):
+        sheet_name = None
     if sheet_name:
-        return [e for e in executions if e.get("sheet_name") == sheet_name]
+        executions = [e for e in executions if e.get("sheet_name") == sheet_name]
+
+    # Add missed executions
+    from app.routes.admin import _build_process_monitor_row
+    monitor_data = _build_process_monitor_row(
+        file_id,
+        process_record,
+        datetime.now(ZoneInfo("America/Santiago")),
+    )
+    missed_dates = monitor_data.get("stats", {}).get("missed_dates", [])
+    for date_str in missed_dates:
+        executions.append({
+            "timestamp": date_str + "T00:00:00",  # approximate
+            "uploaded_by": "Sistema",
+            "status": "missed",
+            "file_name": "Carga faltante",
+        })
+
+    executions.sort(key=lambda e: e["timestamp"])
     return executions
 
 
