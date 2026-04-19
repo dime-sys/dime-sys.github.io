@@ -437,8 +437,6 @@ def get_executions_by_file(file_id: str, sheet_name: str = Query(default=None)):
     if not process_record:
         return []
     executions = list(process_record.get("executions", []) or [])
-    if isinstance(sheet_name, Query):
-        sheet_name = None
     if sheet_name:
         executions = [e for e in executions if e.get("sheet_name") == sheet_name]
 
