@@ -8,7 +8,7 @@ services:
     environment:
       - POSTGRES_DB=data_intake_management
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dime_pg_2026!}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,18 +18,36 @@ services:
       retries: 10
     restart: always
 
+  postgres_backup:
+    image: postgres:16-alpine
+    container_name: app_postgres_backup
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD:-dime_pg_2026!}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c "while true; do
+        pg_dump -h postgres -U postgres data_intake_management > /backups/backup_$$(date +%Y%m%d_%H%M%S).sql
+        ls -t /backups/backup_*.sql | tail -n +25 | xargs rm -f
+        sleep 3600;
+      done"
+    restart: always
+
   backend:
     build: ./backend
     container_name: app_backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
     restart: always
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/data_intake_management
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-dime_pg_2026!}@postgres:5432/data_intake_management
       - CORS_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:80,http://127.0.0.1:5173
     volumes:
       - ./output_delivery:/app/output_delivery

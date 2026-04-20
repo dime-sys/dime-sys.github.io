@@ -3,6 +3,9 @@
 .env.local
 .env.production
 
+# DB Backups
+backups/
+
 # Python
 __pycache__/
 *.py[cod]
