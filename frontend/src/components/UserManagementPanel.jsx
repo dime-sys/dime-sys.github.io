@@ -18,23 +18,32 @@ const ROLE_META = {
   responsable: { label: "Responsable", bg: "#fef9c3", color: "#854d0e", icon: "📋" },
 };
 
-function RoleBadge({ role }) {
-  const m = ROLE_META[role] || { label: role, bg: "#f3f4f6", color: "#374151", icon: "👤" };
+function RoleBadge({ role, roles }) {
+  const effectiveRoles = roles || (role ? [role] : []);
+  if (!effectiveRoles.length) return null;
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "4px",
-        background: m.bg,
-        color: m.color,
-        borderRadius: "999px",
-        padding: "2px 9px",
-        fontSize: "11px",
-        fontWeight: 700,
-      }}
-    >
-      {m.icon} {m.label}
+    <span style={{ display: "inline-flex", gap: "4px", flexWrap: "wrap" }}>
+      {effectiveRoles.map((r) => {
+        const m = ROLE_META[r] || { label: r, bg: "#f3f4f6", color: "#374151", icon: "👤" };
+        return (
+          <span
+            key={r}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              background: m.bg,
+              color: m.color,
+              borderRadius: "999px",
+              padding: "2px 9px",
+              fontSize: "11px",
+              fontWeight: 700,
+            }}
+          >
+            {m.icon} {m.label}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -55,16 +64,25 @@ function collectProjectNodes(node, depth = 0) {
 function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole = "admin" }) {
   const isEdit = !!user?.id;
   const isCallerConfigurador = callerRole === "configurador";
+  // Normalize to roles array
+  const initialRoles = user?.roles || (user?.role ? [user.role] : ["configurador"]);
   const [form, setForm] = useState({
     username: user?.username || "",
     password: "",
-    role: user?.role || "configurador",
+    roles: initialRoles,
     assigned_project_ids: user?.assigned_project_ids || [],
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const toggleRole = (roleKey) => {
+    set("roles", form.roles.includes(roleKey)
+      ? form.roles.filter((r) => r !== roleKey)
+      : [...form.roles, roleKey]
+    );
+  };
 
   const toggleProject = (id) => {
     set(
@@ -81,6 +99,7 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
       if (!form.username.trim()) { setError("El nombre de usuario es obligatorio"); return; }
       if (!isEdit && !form.password.trim()) { setError("La contraseña es obligatoria"); return; }
       if (!isEdit && form.password.length < 4) { setError("La contraseña debe tener al menos 4 caracteres"); return; }
+      if (!form.roles.length) { setError("Debes asignar al menos un rol"); return; }
     } else if (!isEdit) {
       if (!form.username.trim()) { setError("El nombre de usuario es obligatorio"); return; }
     }
@@ -98,13 +117,13 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
         }
       } else {
         const payload = {
-          role: form.role,
+          roles: form.roles,
           assigned_project_ids: form.assigned_project_ids,
           ...(form.password ? { password: form.password } : {}),
         };
         saved = isEdit
           ? await updateUser(user.id, payload)
-          : await createUser({ username: form.username, password: form.password, role: form.role, assigned_project_ids: form.assigned_project_ids });
+          : await createUser({ username: form.username, password: form.password, roles: form.roles, assigned_project_ids: form.assigned_project_ids });
       }
       onSave(saved);
     } catch (err) {
@@ -113,6 +132,11 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
       setSaving(false);
     }
   };
+
+  // Show project assignment when user has configurador or responsable role (needs scope)
+  const needsAssignment = form.roles.includes("responsable") || form.roles.includes("configurador") || isCallerConfigurador;
+  // Show individual processes only for responsable role
+  const needsProcesses = form.roles.includes("responsable") || (isCallerConfigurador && (user?.roles || [user?.role]).includes("responsable"));
 
   const inputStyle = {
     width: "100%",
@@ -175,7 +199,7 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
       {!isCallerConfigurador && (
         <div>
           <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#6b7280", marginBottom: "6px" }}>
-            Rol
+            Roles
           </label>
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {Object.entries(ROLE_META).map(([roleKey, m]) => (
@@ -188,16 +212,14 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
                   cursor: "pointer",
                   padding: "8px 10px",
                   borderRadius: "8px",
-                  border: `1px solid ${form.role === roleKey ? "#3b82f6" : "#e5e7eb"}`,
-                  background: form.role === roleKey ? "#eff6ff" : "white",
+                  border: `1px solid ${form.roles.includes(roleKey) ? "#3b82f6" : "#e5e7eb"}`,
+                  background: form.roles.includes(roleKey) ? "#eff6ff" : "white",
                 }}
               >
                 <input
-                  type="radio"
-                  name="role"
-                  value={roleKey}
-                  checked={form.role === roleKey}
-                  onChange={() => set("role", roleKey)}
+                  type="checkbox"
+                  checked={form.roles.includes(roleKey)}
+                  onChange={() => toggleRole(roleKey)}
                   style={{ marginTop: "2px" }}
                 />
                 <div>
@@ -217,11 +239,11 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
       )}
 
       {/* Project assignment: for responsable (folders + processes) or configurador (folders only) */}
-      {(form.role === "responsable" || form.role === "configurador" || isCallerConfigurador) && (
+      {needsAssignment && (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div>
             <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#6b7280", marginBottom: "6px" }}>
-              {form.role === "configurador" ? "📁 Proyectos gestionados" : "📂 Carpetas asignadas"}
+              {form.roles.includes("configurador") && !form.roles.includes("responsable") ? "📁 Proyectos gestionados" : "📂 Carpetas asignadas"}
             </label>
             {projectNodes.length === 0 ? (
               <div style={{ fontSize: "12px", color: "#9ca3af", fontStyle: "italic" }}>
@@ -243,7 +265,7 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
           </div>
 
           {/* Individual processes: only for responsable */}
-          {(form.role === "responsable" || (isCallerConfigurador && user?.role === "responsable")) && (
+          {needsProcesses && (
             <div>
               <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "#6b7280", marginBottom: "6px" }}>
                 📊 Procesos individuales asignados
@@ -332,7 +354,8 @@ function UserForm({ user, onSave, onCancel, projectNodes, processes, callerRole 
 }
 
 function UserManagementPanel({ onBack, currentUser }) {
-  const isConfigurador = currentUser?.role === "configurador";
+  const hasRole = (u, r) => (u?.roles || (u?.role ? [u.role] : [])).includes(r);
+  const isConfigurador = hasRole(currentUser, "configurador") && !hasRole(currentUser, "admin");
   const [users, setUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [approvingPending, setApprovingPending] = useState(null); // { id, role }
@@ -651,7 +674,7 @@ function UserManagementPanel({ onBack, currentUser }) {
               {Object.entries(ROLE_META)
                 .filter(([roleKey]) => !isConfigurador || roleKey === "responsable")
                 .map(([roleKey, m]) => {
-                const count = users.filter((u) => u.role === roleKey).length;
+                const count = users.filter((u) => (u.roles || [u.role]).includes(roleKey)).length;
                 return (
                   <button
                     key={roleKey}
@@ -739,7 +762,7 @@ function UserManagementPanel({ onBack, currentUser }) {
                       <div style={{ fontSize: "18px", fontWeight: 700, color: "#111827", marginBottom: "6px" }}>
                         {ROLE_META[selectedUser.role]?.icon} {selectedUser.username}
                       </div>
-                      <RoleBadge role={selectedUser.role} />
+                      <RoleBadge roles={selectedUser.roles} role={selectedUser.role} />
                     </div>
                     {!isConfigurador && (
                       <button
@@ -789,7 +812,7 @@ function UserManagementPanel({ onBack, currentUser }) {
       {/* Role users modal */}
       {roleModal && (() => {
         const m = ROLE_META[roleModal];
-        const roleUsers = users.filter((u) => u.role === roleModal);
+        const roleUsers = users.filter((u) => (u.roles || (u.role ? [u.role] : [])).includes(roleModal));
         return (
           <div
             style={{
@@ -887,7 +910,7 @@ function UserManagementPanel({ onBack, currentUser }) {
                             ⌚ Pendiente ingreso
                           </span>
                         )}
-                        {!u.preregistered && u.role === "responsable" && u.assigned_project_ids?.length > 0 && (
+                        {!u.preregistered && (u.roles || [u.role]).includes("responsable") && u.assigned_project_ids?.length > 0 && (
                           <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>
                             {u.assigned_project_ids.length} elemento(s) asignado(s)
                           </div>

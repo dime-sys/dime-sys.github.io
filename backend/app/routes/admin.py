@@ -130,7 +130,8 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
 
     responsables = []
     for u in USERS_DB.values():
-        if u.get("role") != "responsable":
+        from app.routes.auth import _has_role
+        if not _has_role(u, "responsable"):
             continue
         if _user_covers_process(u, process_id, folder_ids):
             responsables.append(u.get("username"))
@@ -359,7 +360,8 @@ def _user_covers_process(user: dict, process_id: str, folder_ids: list) -> bool:
     assigned = set(user.get("assigned_project_ids", []) or [])
 
     # Admin with empty assignments is treated as global admin.
-    if user.get("role") == "admin" and not assigned:
+    from app.routes.auth import _has_role
+    if _has_role(user, "admin") and not assigned:
         return True
 
     if not assigned:
@@ -370,10 +372,12 @@ def _user_covers_process(user: dict, process_id: str, folder_ids: list) -> bool:
 
 
 def _public_trace_user(user: dict) -> dict:
+    from app.routes.auth import _get_user_roles, _primary_role
     return {
         "id": user.get("id"),
         "username": user.get("username"),
-        "role": user.get("role"),
+        "roles": _get_user_roles(user),
+        "role": _primary_role(user),
         "assigned_project_ids": user.get("assigned_project_ids", []),
         "created_at": user.get("created_at"),
     }
@@ -633,7 +637,6 @@ def role_traceability(
     caller = _get_user_by_token(authorization)
     if caller.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo administradores pueden ver trazabilidad")
-
     allowed_roles = {"admin", "configurador", "responsable"}
     if role and role not in allowed_roles:
         raise HTTPException(status_code=400, detail="role debe ser admin, configurador o responsable")
@@ -667,7 +670,7 @@ def role_traceability(
 
     users = [_public_trace_user(u) for u in USERS_DB.values()]
     if role:
-        users = [u for u in users if u.get("role") == role]
+        users = [u for u in users if role in u.get("roles", [u.get("role", "")])]
     if user:
         ul = user.lower()
         users = [u for u in users if ul in (u.get("username") or "").lower()]
@@ -688,7 +691,9 @@ def role_traceability(
         assigned = {"admin": [], "configurador": [], "responsable": []}
         for u in users_by_id.values():
             if _user_covers_process(u, pid, folder_ids):
-                assigned[u.get("role", "responsable")].append(u)
+                for r in u.get("roles", [u.get("role", "responsable")]):
+                    if r in assigned:
+                        assigned[r].append(u)
 
         if role:
             for rk in ["admin", "configurador", "responsable"]:
@@ -936,7 +941,8 @@ def reset_project(project_id: str, authorization: Optional[str] = Header(None)):
     from app.routes.projects import PROJECTS_DB, save_projects_state
     
     caller = _get_user_by_token(authorization)
-    if caller.get("role") != "admin":
+    from app.routes.auth import _has_role as _hr
+    if not _hr(caller, "admin"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden resetear proyectos")
 
     # Delete project folder structure
@@ -972,7 +978,8 @@ def reset_all_data(authorization: Optional[str] = Header(None)):
     from app.db.output_store import SUBSCRIPTIONS_DB, DELIVERY_JOBS_DB, ARTIFACTS_DB, save_subscriptions_state, save_delivery_jobs_state, save_artifacts_state
     
     caller = _get_user_by_token(authorization)
-    if caller.get("role") != "admin":
+    from app.routes.auth import _has_role as _hr
+    if not _hr(caller, "admin"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden resetear la aplicación")
 
     admin_user_id = caller.get("id")

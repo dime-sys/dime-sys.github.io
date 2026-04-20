@@ -219,7 +219,7 @@ function App() {
   // Solo el admin ve el wizard cuando no hay proyectos y ya sabemos quién es
   useEffect(() => {
     if (!authChecked) return;
-    if (currentUser?.role === 'admin' && projects.length === 0 && !setupComplete) {
+    if (currentUser && hasRole(currentUser, 'admin') && projects.length === 0 && !setupComplete) {
       setShowSetupWizard(true);
     } else {
       setShowSetupWizard(false);
@@ -526,12 +526,15 @@ function App() {
     responsable: { label: "Responsable", bg: "#fef9c3", color: "#854d0e" },
   };
 
+  const hasRole = (user, role) => (user?.roles || (user?.role ? [user.role] : [])).includes(role);
+
   const roleMeta = ROLE_META[currentUser?.role] || { label: currentUser?.role, bg: "#f3f4f6", color: "#374151" };
 
   // Responsable can only upload to their assigned project nodes
   const canUploadToSelectedProject =
     !currentUser ||
-    currentUser.role !== "responsable" ||
+    hasRole(currentUser, "admin") ||
+    hasRole(currentUser, "configurador") ||
     (currentUser.assigned_project_ids || []).includes(selectedProject?.id);
 
   return (
@@ -544,7 +547,7 @@ function App() {
         </h1>
 
         {/* Role-based nav buttons */}
-        {(currentUser?.role === "admin" || currentUser?.role === "configurador") && (
+        {(hasRole(currentUser, "admin") || hasRole(currentUser, "configurador")) && (
           <button
             onClick={() => setView(view === "users" ? "home" : "users")}
             style={{
@@ -561,7 +564,7 @@ function App() {
             👥 Usuarios
           </button>
         )}
-        {currentUser?.role === "admin" && (
+        {hasRole(currentUser, "admin") && (
           <>
             <button
               onClick={() => setView(view === "admin" ? "home" : "admin")}
@@ -584,7 +587,7 @@ function App() {
         {/* Current user info */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "8px" }}>
           <span style={{ fontSize: "14px" }}>
-            {currentUser?.role === "admin" ? "🛡" : currentUser?.role === "configurador" ? "⚙" : "📋"}
+            {hasRole(currentUser, "admin") ? "🛡" : hasRole(currentUser, "configurador") ? "⚙" : "📋"}
           </span>
           <span style={{ fontSize: "12px", fontWeight: 600, color: "#374151" }}>{currentUser?.username}</span>
           <span style={{ display: "inline-block", background: roleMeta.bg, color: roleMeta.color, borderRadius: "999px", padding: "1px 7px", fontSize: "10px", fontWeight: 700 }}>
@@ -622,11 +625,11 @@ function App() {
         </div>
 
         <div className="main-content">
-          {view === "users" && (currentUser?.role === "admin" || currentUser?.role === "configurador") && (
+          {view === "users" && (hasRole(currentUser, "admin") || hasRole(currentUser, "configurador")) && (
             <UserManagementPanel currentUser={currentUser} onBack={() => setView("home")} />
           )}
 
-          {view === "admin" && currentUser?.role === "admin" && (
+          {view === "admin" && hasRole(currentUser, "admin") && (
             <AdminPanel onBack={() => setView("home")} />
           )}
 
@@ -643,7 +646,7 @@ function App() {
                     </span>
                   </div>
 
-                  {currentUser?.role === "responsable" ? (
+                  {!hasRole(currentUser, "admin") && !hasRole(currentUser, "configurador") ? (
                     <div style={{ padding: "1.75rem", border: "1.5px dashed #d1d5db", borderRadius: "10px", backgroundColor: "#f9fafb", textAlign: "center", color: "#6b7280" }}>
                       <div style={{ fontSize: "1.75rem", marginBottom: "8px" }}>📋</div>
                       <p style={{ fontSize: "13px", fontWeight: 600, color: "#374151", margin: "0 0 4px" }}>Solo puedes cargar instancias a procesos existentes</p>
@@ -672,7 +675,7 @@ function App() {
                 </div>
               )}
 
-              {step === 2 && selectedFile && currentUser?.role !== "responsable" && (
+              {step === 2 && selectedFile && !hasRole(currentUser, "responsable") && (
                 <>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "14px", paddingTop: "1.25rem" }}>
                     <span style={infoPill}>📊 {selectedFile.name}</span>
@@ -825,7 +828,7 @@ function App() {
             </>
           )}
 
-          {view === "rule" && data && currentUser?.role !== "responsable" && (
+          {view === "rule" && data && !hasRole(currentUser, "responsable") && (
             <div className="workspace-shell">
               <div className="workspace-topbar">
                 <div className="workspace-actions">
