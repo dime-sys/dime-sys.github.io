@@ -11,7 +11,7 @@ from app.db.user_store import (
     save_pending_users_state,
     save_users_state,
 )
-from app.routes.auth import _get_user_by_token, _public_user
+from app.routes.auth import _get_user_by_token, _public_user, _has_role, _get_user_roles
 
 router = APIRouter()
 
@@ -28,12 +28,14 @@ def _collect_accessible_ids(node) -> set:
 class CreateUserRequest(BaseModel):
     username: str
     password: str
-    role: str  # "admin" | "configurador" | "responsable"
+    roles: Optional[List[str]] = None  # preferred: list of roles
+    role: Optional[str] = None         # legacy single-role compat
     assigned_project_ids: List[str] = []
 
 
 class UpdateUserRequest(BaseModel):
-    role: Optional[str] = None
+    roles: Optional[List[str]] = None  # preferred: list of roles
+    role: Optional[str] = None         # legacy single-role compat
     password: Optional[str] = None
     assigned_project_ids: Optional[List[str]] = None
 
@@ -41,9 +43,18 @@ class UpdateUserRequest(BaseModel):
 VALID_ROLES = ("admin", "configurador", "responsable")
 
 
+def _coerce_roles(roles_field, role_field) -> List[str]:
+    """Normalize roles from either 'roles' list or legacy 'role' string."""
+    if roles_field:
+        return [r for r in roles_field if r in VALID_ROLES]
+    if role_field and role_field in VALID_ROLES:
+        return [role_field]
+    return []
+
+
 def _require_admin(authorization: Optional[str]) -> dict:
     user = _get_user_by_token(authorization)
-    if user["role"] != "admin":
+    if not _has_role(user, "admin"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden gestionar usuarios")
     return user
 
@@ -51,18 +62,19 @@ def _require_admin(authorization: Optional[str]) -> dict:
 @router.get("/")
 def list_users(authorization: Optional[str] = Header(None)):
     caller = _get_user_by_token(authorization)
-    if caller["role"] == "admin":
+    if _has_role(caller, "admin"):
         return [_public_user(u) for u in USERS_DB.values()]
-    if caller["role"] == "configurador":
-        return [_public_user(u) for u in USERS_DB.values() if u["role"] == "responsable"]
+    if _has_role(caller, "configurador"):
+        return [_public_user(u) for u in USERS_DB.values() if _has_role(u, "responsable")]
     raise HTTPException(status_code=403, detail="Sin permiso")
 
 
 @router.post("/")
 def create_user(body: CreateUserRequest, authorization: Optional[str] = Header(None)):
     _require_admin(authorization)
-    if body.role not in VALID_ROLES:
-        raise HTTPException(status_code=400, detail="Rol inválido. Debe ser: admin, configurador o responsable")
+    effective_roles = _coerce_roles(body.roles, body.role)
+    if not effective_roles:
+        raise HTTPException(status_code=400, detail="Debe asignar al menos un rol válido (admin, configurador, responsable)")
     if any(u["username"] == body.username for u in USERS_DB.values()):
         raise HTTPException(status_code=400, detail="El nombre de usuario ya existe")
     user_id = str(uuid.uuid4())
@@ -70,7 +82,7 @@ def create_user(body: CreateUserRequest, authorization: Optional[str] = Header(N
         "id": user_id,
         "username": body.username,
         "password_hash": _hash_password(body.password),
-        "role": body.role,
+        "roles": effective_roles,
         "assigned_project_ids": body.assigned_project_ids,
         "created_at": datetime.utcnow().isoformat(),
     }
@@ -85,11 +97,11 @@ def update_user(user_id: str, body: UpdateUserRequest, authorization: Optional[s
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if caller["role"] == "configurador":
+    if _has_role(caller, "configurador") and not _has_role(caller, "admin"):
         # Configuradores can only update assigned_project_ids for responsable users
-        if user["role"] != "responsable":
+        if not _has_role(user, "responsable"):
             raise HTTPException(status_code=403, detail="El configurador solo puede asignar proyectos a responsables")
-        if body.role is not None or body.password is not None:
+        if (body.roles is not None or body.role is not None) or body.password is not None:
             raise HTTPException(status_code=403, detail="El configurador solo puede modificar las asignaciones de carpetas")
         if body.assigned_project_ids is not None:
             from app.routes.projects import PROJECTS_DB
@@ -108,12 +120,12 @@ def update_user(user_id: str, body: UpdateUserRequest, authorization: Optional[s
         return _public_user(user)
 
     # Admin path
-    if caller["role"] != "admin":
+    if not _has_role(caller, "admin"):
         raise HTTPException(status_code=403, detail="Sin permiso")
-    if body.role is not None:
-        if body.role not in VALID_ROLES:
-            raise HTTPException(status_code=400, detail="Rol inválido")
-        user["role"] = body.role
+    new_roles = _coerce_roles(body.roles, body.role)
+    if new_roles:
+        user["roles"] = new_roles
+        user.pop("role", None)  # remove legacy field
     if body.password is not None:
         if len(body.password) < 4:
             raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 4 caracteres")
@@ -139,7 +151,8 @@ def delete_user(user_id: str, authorization: Optional[str] = Header(None)):
 # ── Pending users (self-registration flow) ────────────────────────────────────
 
 class ApprovePendingRequest(BaseModel):
-    role: str
+    roles: Optional[List[str]] = None  # preferred
+    role: Optional[str] = None         # legacy compat
     assigned_project_ids: List[str] = []
 
 
@@ -159,8 +172,9 @@ def approve_pending(
     pending = PENDING_USERS_DB.get(pending_id)
     if not pending:
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
-    if body.role not in VALID_ROLES:
-        raise HTTPException(status_code=400, detail="Rol inválido")
+    effective_roles = _coerce_roles(body.roles, body.role)
+    if not effective_roles:
+        raise HTTPException(status_code=400, detail="Debe asignar al menos un rol válido")
     # Don't allow duplicate email as username
     if any(u["username"] == pending["email"] for u in USERS_DB.values()):
         del PENDING_USERS_DB[pending_id]
@@ -171,7 +185,7 @@ def approve_pending(
         "id": user_id,
         "username": pending["email"],
         "password_hash": pending["password_hash"],
-        "role": body.role,
+        "roles": effective_roles,
         "assigned_project_ids": body.assigned_project_ids,
         "created_at": datetime.now().isoformat(timespec="seconds"),
     }
@@ -204,7 +218,7 @@ def preregister_user(body: PreRegisterRequest, authorization: Optional[str] = He
     On first login the user sets their own password and immediately gets a session.
     """
     caller = _get_user_by_token(authorization)
-    if caller["role"] not in ("admin", "configurador"):
+    if not _has_role(caller, "admin") and not _has_role(caller, "configurador"):
         raise HTTPException(status_code=403, detail="Sin permiso")
 
     username = body.username.strip()
@@ -214,7 +228,7 @@ def preregister_user(body: PreRegisterRequest, authorization: Optional[str] = He
         raise HTTPException(status_code=400, detail="Ya existe un usuario con ese nombre")
 
     assigned_ids = list(body.assigned_project_ids)
-    if caller["role"] == "configurador":
+    if _has_role(caller, "configurador") and not _has_role(caller, "admin"):
         from app.routes.projects import PROJECTS_DB
         accessible: set = set()
         for pid in caller.get("assigned_project_ids", []):
@@ -228,7 +242,7 @@ def preregister_user(body: PreRegisterRequest, authorization: Optional[str] = He
         "id": user_id,
         "username": username,
         "password_hash": "",
-        "role": "responsable",
+        "roles": ["responsable"],
         "assigned_project_ids": assigned_ids,
         "preregistered": True,
         "created_at": datetime.utcnow().isoformat(),

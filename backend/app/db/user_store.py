@@ -39,7 +39,7 @@ def _seed():
             "id": uid,
             "username": username,
             "password_hash": _hash_password(username),  # contraseña = nombre de usuario
-            "role": role,
+            "roles": [role],
             "assigned_project_ids": [],
             "created_at": datetime.utcnow().isoformat(),
         }

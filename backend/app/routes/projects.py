@@ -11,7 +11,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 
 def _get_role(authorization: Optional[str]) -> Optional[str]:
-    """Resolve a Bearer token to the user's role, or None if unauthenticated."""
+    """Resolve a Bearer token to the user's primary role, or None if unauthenticated."""
     if not authorization or not authorization.startswith("Bearer "):
         return None
     token = authorization[7:]
@@ -20,7 +20,10 @@ def _get_role(authorization: Optional[str]) -> Optional[str]:
     if not uid:
         return None
     user = USERS_DB.get(uid)
-    return user["role"] if user else None
+    if not user:
+        return None
+    from app.routes.auth import _primary_role
+    return _primary_role(user)
 
 
 def _get_full_user(authorization: Optional[str]) -> Optional[dict]:
@@ -161,9 +164,13 @@ async def get_all_projects(authorization: Optional[str] = Header(None)):
     """Get all root projects. Configuradors only see their assigned projects."""
     config = get_config()
     user = _get_full_user(authorization)
-    if user and user["role"] == "configurador":
-        assigned = set(user.get("assigned_project_ids", []))
-        projects = [p for p in PROJECTS_DB.values() if p.id in assigned]
+    if user:
+        from app.routes.auth import _has_role
+        if _has_role(user, "configurador") and not _has_role(user, "admin"):
+            assigned = set(user.get("assigned_project_ids", []))
+            projects = [p for p in PROJECTS_DB.values() if p.id in assigned]
+        else:
+            projects = list(PROJECTS_DB.values())
     else:
         projects = list(PROJECTS_DB.values())
 

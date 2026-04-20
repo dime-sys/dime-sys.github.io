@@ -68,11 +68,36 @@ def _get_user_by_token(authorization: Optional[str]) -> dict:
     return user
 
 
+def _get_user_roles(user: dict) -> list:
+    """Return normalized roles list, supporting both legacy 'role' and new 'roles'."""
+    roles = user.get("roles")
+    if isinstance(roles, list):
+        return roles
+    legacy = user.get("role")
+    return [legacy] if legacy else []
+
+
+def _has_role(user: dict, role: str) -> bool:
+    """Return True if the user has the given role."""
+    return role in _get_user_roles(user)
+
+
+def _primary_role(user: dict) -> str:
+    """Return the highest-priority single role for display (admin > configurador > responsable)."""
+    roles = _get_user_roles(user)
+    for r in ("admin", "configurador", "responsable"):
+        if r in roles:
+            return r
+    return roles[0] if roles else "responsable"
+
+
 def _public_user(user: dict) -> dict:
+    roles = _get_user_roles(user)
     return {
         "id": user["id"],
         "username": user["username"],
-        "role": user["role"],
+        "roles": roles,
+        "role": _primary_role(user),  # backward compat: highest-priority role
         "assigned_project_ids": user.get("assigned_project_ids", []),
         "created_at": user.get("created_at"),
         "preregistered": user.get("preregistered", False),

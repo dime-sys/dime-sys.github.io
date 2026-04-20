@@ -375,11 +375,12 @@ async def upload_file(
         # Enforce role-based upload restrictions
         if authorization and authorization.startswith("Bearer "):
             from app.db.user_store import SESSIONS_DB, USERS_DB
+            from app.routes.auth import _has_role
             token = authorization[7:]
             uid = SESSIONS_DB.get(token)
             if uid:
                 actor = USERS_DB.get(uid)
-                if actor and actor["role"] == "responsable":
+                if actor and _has_role(actor, "responsable") and not _has_role(actor, "admin") and not _has_role(actor, "configurador"):
                     assigned = actor.get("assigned_project_ids", [])
                     if project_id and project_id not in assigned:
                         raise HTTPException(
@@ -469,11 +470,12 @@ async def upload_file(
         # Responsable cannot create new processes
         if authorization and authorization.startswith("Bearer "):
             from app.db.user_store import SESSIONS_DB, USERS_DB
+            from app.routes.auth import _has_role
             token = authorization[7:]
             uid = SESSIONS_DB.get(token)
             if uid:
                 actor = USERS_DB.get(uid)
-                if actor and actor["role"] == "responsable":
+                if actor and _has_role(actor, "responsable") and not _has_role(actor, "admin") and not _has_role(actor, "configurador"):
                     raise HTTPException(status_code=403, detail="Los responsables no pueden crear nuevos procesos")
 
         process_id = str(uuid.uuid4())
@@ -556,11 +558,12 @@ def list_files(
         assigned_ids: Optional[list] = None
         if authorization and authorization.startswith("Bearer "):
             from app.db.user_store import SESSIONS_DB, USERS_DB
+            from app.routes.auth import _has_role
             token = authorization[7:]
             uid = SESSIONS_DB.get(token)
             if uid:
                 actor = USERS_DB.get(uid)
-                if actor and actor["role"] == "responsable":
+                if actor and _has_role(actor, "responsable") and not _has_role(actor, "admin") and not _has_role(actor, "configurador"):
                     assigned_ids = actor.get("assigned_project_ids", [])
 
         def _visible(file_id: str, data: dict) -> bool:
@@ -599,11 +602,12 @@ async def upload_process_instance(
     # Role check: responsable can only upload to assigned processes or folders
     if authorization and authorization.startswith("Bearer "):
         from app.db.user_store import SESSIONS_DB, USERS_DB
+        from app.routes.auth import _has_role
         token = authorization[7:]
         uid = SESSIONS_DB.get(token)
         if uid:
             actor = USERS_DB.get(uid)
-            if actor and actor["role"] == "responsable":
+            if actor and _has_role(actor, "responsable") and not _has_role(actor, "admin") and not _has_role(actor, "configurador"):
                 assigned = actor.get("assigned_project_ids", [])
                 process_folder = record.get("project_id")
                 if process_id not in assigned and (not process_folder or process_folder not in assigned):
