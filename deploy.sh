@@ -8,9 +8,10 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_URL="https://github.com/cristiantorolopez-coder/Data_Intake_Management_System.git"
-APP_DIR="/opt/data_intake"
-BRANCH="main"
+APP_DIR="${APP_DIR:-$SCRIPT_DIR}"
+BRANCH="${BRANCH:-${2:-}}"
 
 # ── Colores ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
@@ -18,8 +19,25 @@ info()  { echo -e "${GREEN}[INFO]${NC}  $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
+resolve_branch() {
+    if [ -n "${BRANCH:-}" ]; then
+        echo "$BRANCH"
+        return
+    fi
+
+    if [ -d "$APP_DIR/.git" ]; then
+        git -C "$APP_DIR" rev-parse --abbrev-ref HEAD
+        return
+    fi
+
+    echo "main"
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 setup() {
+    local branch
+    branch="$(resolve_branch)"
+
     info "Instalando dependencias del sistema..."
     apt-get update -qq
     apt-get install -y -qq curl git ufw
@@ -49,8 +67,8 @@ setup() {
     if [ -d "$APP_DIR" ]; then
         warn "El directorio $APP_DIR ya existe. Usa 'update' para actualizar."
     else
-        info "Clonando repositorio en $APP_DIR..."
-        git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
+        info "Clonando repositorio en $APP_DIR (branch: $branch)..."
+        git clone --branch "$branch" "$REPO_URL" "$APP_DIR"
     fi
 
     # Crear .env si no existe
@@ -82,11 +100,13 @@ start() {
 
 # ─────────────────────────────────────────────────────────────────────────────
 update() {
+    local branch
     [ -d "$APP_DIR" ] || error "Directorio $APP_DIR no encontrado. Ejecuta primero: bash deploy.sh setup"
+    branch="$(resolve_branch)"
 
-    info "Actualizando código..."
+    info "Actualizando código (branch: $branch)..."
     cd "$APP_DIR"
-    git pull origin "$BRANCH"
+    git pull origin "$branch"
 
     info "Reconstruyendo e iniciando servicios..."
     docker compose -f docker-compose.prod.yml --env-file .env up -d --build
@@ -118,12 +138,14 @@ case "${1:-help}" in
     logs)   logs   ;;
     stop)   stop   ;;
     *)
-        echo "Uso: bash deploy.sh [setup|start|update|logs|stop]"
+        echo "Uso: bash deploy.sh [setup|start|update|logs|stop] [branch]"
         echo ""
         echo "  setup   — Instala Docker, clona el repo, configura firewall (primera vez)"
         echo "  start   — Levanta los contenedores con docker compose"
-        echo "  update  — Actualiza código y reinicia contenedores"
+        echo "  update  — Actualiza el branch actual y reinicia contenedores"
         echo "  logs    — Muestra logs en tiempo real"
         echo "  stop    — Detiene todos los contenedores"
+        echo ""
+        echo "Variables opcionales: APP_DIR=/ruta/al/repo BRANCH=nombre-del-branch"
         ;;
 esac
