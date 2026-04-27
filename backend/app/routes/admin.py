@@ -628,14 +628,14 @@ def role_traceability(
       - role: admin | configurador | responsable
       - user: username substring
     """
-    from app.routes.auth import _get_user_by_token
+    from app.routes.auth import _get_user_by_token, _has_role
     from app.db.user_store import USERS_DB
     from app.routes.upload import FILES_DB
     from app.routes.rules import _get_folder_ids, _get_folder_path
     from app.routes.projects import PROJECTS_DB, get_config
 
     caller = _get_user_by_token(authorization)
-    if caller.get("role") != "admin":
+    if not _has_role(caller, "admin"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden ver trazabilidad")
     allowed_roles = {"admin", "configurador", "responsable"}
     if role and role not in allowed_roles:
