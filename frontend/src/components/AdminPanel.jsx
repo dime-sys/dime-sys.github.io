@@ -1462,10 +1462,20 @@ function ResetTab({ onReset }) {
       try {
         const token = localStorage.getItem("authToken");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch(`${API}/upload/`, { headers });
+        const res = await fetch(`${API}/projects/`, { headers });
         const data = await res.json();
-        const projectIds = [...new Set(data.map((p) => p.project_id).filter(Boolean))];
-        setProjects(projectIds);
+
+        const flatten = (nodes, prefix = "") => {
+          const result = [];
+          for (const node of nodes || []) {
+            const label = prefix ? `${prefix} / ${node.name}` : node.name;
+            result.push({ id: node.id, label });
+            result.push(...flatten(node.children, label));
+          }
+          return result;
+        };
+
+        setProjects(flatten(data.projects || []));
       } catch (e) {
         console.error("Error loading projects:", e);
       }
@@ -1565,9 +1575,9 @@ function ResetTab({ onReset }) {
             style={selectStyle}
           >
             <option value="">— Selecciona un proyecto —</option>
-            {projects.map((pid) => (
-              <option key={pid} value={pid}>
-                {pid}
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
               </option>
             ))}
           </select>
@@ -1642,7 +1652,7 @@ function ResetTab({ onReset }) {
             </h3>
             <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#374151", lineHeight: "1.5" }}>
               {resetConfirmation === "project"
-                ? `¿Estás seguro de que deseas eliminar todos los datos del proyecto "${selectedProjectId}"? Esta acción no se puede deshacer.`
+                ? `¿Estás seguro de que deseas eliminar todos los datos del proyecto "${projects.find(p => p.id === selectedProjectId)?.label || selectedProjectId}"? Esta acción no se puede deshacer.`
                 : "¿Estás seguro de que deseas eliminar TODOS los datos de la aplicación? Esta acción no se puede deshacer y perderás todos los proyectos, archivos, ejecuciones y suscripciones."}
             </p>
             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
