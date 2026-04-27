@@ -938,17 +938,22 @@ def reset_project(project_id: str, authorization: Optional[str] = Header(None)):
     from app.routes.auth import _get_user_by_token
     from app.routes.upload import FILES_DB, save_files_state
     from app.routes.rules import EXECUTIONS_DB, save_executions_state
-    from app.routes.projects import PROJECTS_DB, save_projects_state
+    from app.routes.projects import PROJECTS_DB, save_projects_state, find_node_by_id, find_parent_node
     
     caller = _get_user_by_token(authorization)
     from app.routes.auth import _has_role as _hr
     if not _hr(caller, "admin"):
         raise HTTPException(status_code=403, detail="Solo administradores pueden resetear proyectos")
 
-    # Delete project folder structure
+    # Delete project folder structure (root or child node)
     if project_id in PROJECTS_DB:
         del PROJECTS_DB[project_id]
         save_projects_state()
+    else:
+        parent = find_parent_node(project_id)
+        if parent is not None:
+            parent.children = [c for c in parent.children if c.id != project_id]
+            save_projects_state()
 
     # Delete all files/executions in this project
     files_to_delete = [f_id for f_id, f_rec in FILES_DB.items() if f_rec.get("project_id") == project_id]
