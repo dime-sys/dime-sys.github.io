@@ -1194,6 +1194,8 @@ function RoleTraceabilityTab() {
   const [data, setData] = useState({ folders: [], folder_aggregate: [], processes: [], users: [] });
   const [allUsers, setAllUsers] = useState([]);
   const [filters, setFilters] = useState({ scope_id: "", process_id: "", role: "", user: "" });
+  const [expanded, setExpanded] = useState(new Set());
+  const [selectedProcess, setSelectedProcess] = useState(null);
   const [assignDraft, setAssignDraft] = useState({});
 
   const load = useCallback(async () => {
@@ -1225,28 +1227,49 @@ function RoleTraceabilityTab() {
     }
   }, [filters]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
-  const inputStyle = {
-    padding: "6px 10px", border: "1px solid #e5e7eb", borderRadius: "6px",
-    fontSize: "13px", background: "white", width: "100%", boxSizing: "border-box",
+  const toggle = (id) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const expandAll = () => setExpanded(new Set(data.folder_aggregate.map(f => f.id)));
+  const collapseAll = () => setExpanded(new Set());
+
+  const statusColor = (s) => ({
+    cumplido: { bg: "#dcfce7", color: "#166534", border: "#bbf7d0" },
+    proximo: { bg: "#fef9c3", color: "#854d0e", border: "#fde047" },
+    atrasado: { bg: "#fee2e2", color: "#991b1b", border: "#fecaca" },
+    sin_compromiso: { bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" },
+  }[s] || { bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" });
+
+  const statusLabel = (s) => ({
+    cumplido: "✓ Cumplido",
+    proximo: "⏰ Próximo",
+    atrasado: "⚠ Atrasado",
+    sin_compromiso: "— Sin compromiso",
+  }[s] || s);
+
+  const statusDot = (s) => {
+    const c = { cumplido: "#22c55e", proximo: "#eab308", atrasado: "#ef4444", sin_compromiso: "#d1d5db" }[s] || "#d1d5db";
+    return <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: c, marginRight: 5, flexShrink: 0 }} />;
   };
 
-  const usersForRole = (roleName) => allUsers.filter((u) => u.role === roleName);
+  const roleColor = (r) => r === "admin" ? "blue" : r === "configurador" ? "green" : "yellow";
 
-  const setDraft = (processId, roleName, value) => {
-    setAssignDraft((d) => ({ ...d, [`${processId}:${roleName}`]: value }));
-  };
+  const usersForRole = (roleName) => allUsers.filter(u => u.role === roleName);
+
+  const setDraft = (processId, roleName, value) =>
+    setAssignDraft(d => ({ ...d, [`${processId}:${roleName}`]: value }));
 
   const assignToProcess = async (processId, roleName) => {
     const key = `${processId}:${roleName}`;
     const userId = assignDraft[key];
     if (!userId) return;
-    const target = allUsers.find((u) => u.id === userId);
+    const target = allUsers.find(u => u.id === userId);
     if (!target) return;
-
     const currentIds = target.assigned_project_ids || [];
     if (!currentIds.includes(processId)) {
       await fetch(`${API}/users/${userId}`, {
@@ -1265,190 +1288,358 @@ function RoleTraceabilityTab() {
     await fetch(`${API}/users/${userObj.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-      body: JSON.stringify({ assigned_project_ids: currentIds.filter((x) => x !== processId) }),
+      body: JSON.stringify({ assigned_project_ids: currentIds.filter(x => x !== processId) }),
     });
     load();
   };
 
-  const roleColor = (r) => {
-    if (r === "admin") return "blue";
-    if (r === "configurador") return "green";
-    return "yellow";
+  // Build tree from flat folder list: { rootId → { node, children[], processes[] } }
+  const buildTree = () => {
+    const agg = {};
+    (data.folder_aggregate || []).forEach(f => { agg[f.id] = { ...f }; });
+
+    const folderMap = {};
+    (data.folders || []).forEach(f => { folderMap[f.id] = { ...f, children: [], processes: [] }; });
+
+    // assign processes to their deepest folder
+    (data.processes || []).forEach(p => {
+      const deepest = (p.folder_ids || []).reduce((best, fid) => {
+        const node = folderMap[fid];
+        if (!node) return best;
+        return (!best || node.level > best.level) ? node : best;
+      }, null);
+      if (deepest) deepest.processes.push(p);
+      else {
+        // no folder: put in a virtual root
+        if (!folderMap["__root__"]) folderMap["__root__"] = { id: "__root__", name: "Sin carpeta", level: 0, full_path: "Sin carpeta", children: [], processes: [] };
+        folderMap["__root__"].processes.push(p);
+      }
+    });
+
+    // Link parent–child
+    const roots = [];
+    (data.folders || []).forEach(f => {
+      if (!f.parent_id) {
+        roots.push(folderMap[f.id]);
+      } else if (folderMap[f.parent_id]) {
+        folderMap[f.parent_id].children.push(folderMap[f.id]);
+      }
+    });
+
+    // Fallback: if no root, render first level items as roots
+    if (roots.length === 0) {
+      return Object.values(folderMap).filter(n => n.level === 1 || n.id === "__root__");
+    }
+    return roots;
   };
 
-  const userChip = (u, processId, roleName) => {
-    const direct = (u.assigned_project_ids || []).includes(processId);
+  const processesInFolder = (folderId) =>
+    (data.processes || []).filter(p => (p.folder_ids || []).includes(folderId));
+
+  const inputStyle = {
+    padding: "6px 10px", border: "1px solid #e5e7eb", borderRadius: "6px",
+    fontSize: "13px", background: "white", boxSizing: "border-box",
+  };
+
+  const renderProcessNode = (p) => {
+    const sc = statusColor(p.monitor_status);
+    const responsables = p.roles?.responsable || [];
+    const isSelected = selectedProcess?.process_id === p.process_id;
     return (
-      <span
-        key={`${processId}-${roleName}-${u.id}`}
+      <div
+        key={p.process_id}
+        onClick={() => setSelectedProcess(isSelected ? null : p)}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "6px",
-          padding: "2px 8px",
-          borderRadius: "999px",
-          fontSize: "11px",
-          border: `1px solid ${direct ? "#d1d5db" : "#bfdbfe"}`,
-          background: direct ? "#ffffff" : "#eff6ff",
-          color: "#374151",
-          marginRight: "6px",
-          marginBottom: "4px",
+          display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 10px",
+          borderRadius: 6, marginLeft: 28, marginBottom: 3,
+          background: isSelected ? "#eff6ff" : "#fafafa",
+          border: `1px solid ${isSelected ? "#bfdbfe" : "#e5e7eb"}`,
+          cursor: "pointer", transition: "background 0.1s",
         }}
-        title={direct ? "Asignación directa al proceso" : "Asignación heredada por carpeta"}
       >
-        {u.username}
-        {!direct && <span style={{ fontSize: "10px", color: "#1d4ed8" }}>heredado</span>}
-        {direct && (
-          <button
-            onClick={() => unassignFromProcess(processId, u)}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: "#991b1b",
-              cursor: "pointer",
-              fontSize: "11px",
-              padding: 0,
-            }}
-            title="Quitar asignación directa"
-          >
-            ×
-          </button>
-        )}
-      </span>
+        <div style={{ marginTop: 2 }}>{statusDot(p.monitor_status)}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#111827" }}>{p.process_name}</span>
+            <span style={{
+              fontSize: 10, padding: "1px 6px", borderRadius: 999,
+              background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`,
+            }}>
+              {statusLabel(p.monitor_status)}
+            </span>
+            {p.stats?.compliance_rate != null && (
+              <span style={{ fontSize: 10, color: "#6b7280" }}>
+                {p.stats.compliance_rate}% cumplimiento
+              </span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
+            {responsables.length === 0
+              ? <span style={{ fontSize: 10, color: "#ef4444" }}>⚠ Sin responsable</span>
+              : responsables.map(u => (
+                <span key={u.id} style={{ fontSize: 10, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 999, padding: "1px 7px", color: "#166534" }}>
+                  👤 {u.username}
+                </span>
+              ))
+            }
+            {p.stats?.missed_days > 0 && (
+              <span style={{ fontSize: 10, color: "#ef4444" }}>
+                {p.stats.missed_days} días sin entrega
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ fontSize: 10, color: "#9ca3af", flexShrink: 0 }}>
+          {p.last_execution?.timestamp ? new Date(p.last_execution.timestamp).toLocaleDateString("es-ES") : "Sin ejecuciones"}
+        </div>
+      </div>
     );
   };
 
-  const roleBlock = (process, roleName) => {
-    const roleUsers = process.roles?.[roleName] || [];
-    const key = `${process.process_id}:${roleName}`;
+  const renderFolderNode = (node, depth = 0) => {
+    const agg = (data.folder_aggregate || []).find(f => f.id === node.id);
+    const procs = processesInFolder(node.id);
+    const isOpen = expanded.has(node.id);
+    const hasProblem = agg?.status_counts?.atrasado > 0;
+    const levelColors = ["#dbeafe", "#dcfce7", "#fef9c3", "#fce7f3", "#ede9fe"];
+    const levelBg = levelColors[(depth) % levelColors.length];
+
     return (
-      <div style={{ marginBottom: "8px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-          <Badge color={roleColor(roleName)}>{roleName}</Badge>
-          <span style={{ fontSize: "11px", color: "#6b7280" }}>{roleUsers.length} usuario(s)</span>
-        </div>
-        <div style={{ marginBottom: "6px" }}>
-          {roleUsers.length === 0
-            ? <span style={{ fontSize: "11px", color: "#9ca3af" }}>Sin usuarios</span>
-            : roleUsers.map((u) => userChip(u, process.process_id, roleName))}
-        </div>
-        <div style={{ display: "flex", gap: "6px" }}>
-          <select
-            style={inputStyle}
-            value={assignDraft[key] || ""}
-            onChange={(e) => setDraft(process.process_id, roleName, e.target.value)}
-          >
-            <option value="">Asignar {roleName}…</option>
-            {usersForRole(roleName).map((u) => (
-              <option key={u.id} value={u.id}>{u.username}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => assignToProcess(process.process_id, roleName)}
-            style={{
-              padding: "6px 10px",
-              borderRadius: "6px",
-              border: "1px solid #e5e7eb",
-              background: "#f3f4f6",
-              cursor: "pointer",
-              fontSize: "12px",
-            }}
-          >
-            Asignar
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(140px, 1fr))", gap: "8px", marginBottom: "12px" }}>
-        <select
-          style={inputStyle}
-          value={filters.scope_id}
-          onChange={(e) => setFilters((f) => ({ ...f, scope_id: e.target.value }))}
+      <div key={node.id} style={{ marginBottom: 2 }}>
+        <div
+          onClick={() => toggle(node.id)}
+          style={{
+            display: "flex", alignItems: "center", gap: 6, padding: "5px 10px",
+            borderRadius: 6, cursor: "pointer",
+            background: isOpen ? levelBg : "#f9fafb",
+            border: `1px solid ${isOpen ? "#cbd5e1" : "#e5e7eb"}`,
+            marginLeft: depth * 16,
+          }}
         >
-          <option value="">Todas las carpetas</option>
-          {data.folders.map((n) => (
-            <option key={n.id} value={n.id}>{n.full_path}</option>
-          ))}
-        </select>
+          <span style={{ fontSize: 12, color: "#6b7280", width: 14, textAlign: "center" }}>
+            {(procs.length > 0 || node.children?.length > 0) ? (isOpen ? "▾" : "▸") : "·"}
+          </span>
+          <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>
+            {node.level_name || `Nivel ${node.level}`}
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", flex: 1 }}>{node.name}</span>
 
-        <select
-          style={inputStyle}
-          value={filters.process_id}
-          onChange={(e) => setFilters((f) => ({ ...f, process_id: e.target.value }))}
-        >
-          <option value="">Todos los procesos</option>
-          {data.processes.map((p) => (
-            <option key={p.process_id} value={p.process_id}>{p.process_name}</option>
-          ))}
-        </select>
-
-        <select
-          style={inputStyle}
-          value={filters.role}
-          onChange={(e) => setFilters((f) => ({ ...f, role: e.target.value }))}
-        >
-          <option value="">Todos los roles</option>
-          <option value="admin">admin</option>
-          <option value="configurador">configurador</option>
-          <option value="responsable">responsable</option>
-        </select>
-
-        <input
-          style={inputStyle}
-          placeholder="Filtrar por usuario"
-          value={filters.user}
-          onChange={(e) => setFilters((f) => ({ ...f, user: e.target.value }))}
-        />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
-        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "10px 12px", maxHeight: "540px", overflowY: "auto" }}>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-            Cobertura por carpeta
-          </div>
-          {(data.folder_aggregate || []).map((f) => (
-            <div key={f.id} style={{ borderBottom: "1px solid #f3f4f6", padding: "8px 0" }}>
-              <div style={{ fontSize: "12px", fontWeight: 600, color: "#111827" }}>{f.full_path}</div>
-              <div style={{ fontSize: "11px", color: "#6b7280", marginTop: "2px" }}>
-                {f.process_count} procesos · admins {f.user_counts?.admin ?? 0} · configuradores {f.user_counts?.configurador ?? 0} · responsables {f.user_counts?.responsable ?? 0}
-              </div>
+          {agg && (
+            <div style={{ display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }}>
+              {agg.status_counts?.atrasado > 0 && (
+                <span style={{ fontSize: 10, background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca", borderRadius: 999, padding: "0 6px" }}>
+                  ⚠ {agg.status_counts.atrasado} atrasado{agg.status_counts.atrasado !== 1 ? "s" : ""}
+                </span>
+              )}
+              {agg.avg_compliance_rate != null && (
+                <span style={{ fontSize: 10, color: "#6b7280" }}>{agg.avg_compliance_rate}% cumpl.</span>
+              )}
+              <span style={{ fontSize: 10, color: "#9ca3af" }}>
+                {agg.process_count} proc · {agg.user_counts?.responsable || 0} resp
+              </span>
             </div>
-          ))}
-          {(data.folder_aggregate || []).length === 0 && <div style={{ fontSize: "12px", color: "#9ca3af" }}>Sin carpetas visibles para el alcance actual.</div>}
-        </div>
-
-        <div style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "8px", padding: "10px 12px", maxHeight: "540px", overflowY: "auto" }}>
-          <div style={{ fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "8px" }}>
-            Trazabilidad por proceso (gestionable)
-          </div>
-
-          {loading ? (
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>Cargando trazabilidad…</div>
-          ) : data.processes.length === 0 ? (
-            <div style={{ fontSize: "12px", color: "#9ca3af" }}>No hay procesos para estos filtros.</div>
-          ) : (
-            data.processes.map((p) => (
-              <div key={p.process_id} style={{ border: "1px solid #e5e7eb", borderRadius: "8px", padding: "10px", marginBottom: "10px", background: "#fafafa" }}>
-                <div style={{ fontSize: "13px", fontWeight: 700, color: "#111827" }}>{p.process_name}</div>
-                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "8px" }}>
-                  {(p.folder_path || []).join(" / ") || "Sin carpeta"}
-                </div>
-
-                {roleBlock(p, "admin")}
-                {roleBlock(p, "configurador")}
-                {roleBlock(p, "responsable")}
-              </div>
-            ))
           )}
         </div>
+
+        {isOpen && (
+          <div>
+            {procs.map(p => renderProcessNode(p))}
+            {(node.children || []).map(child => renderFolderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const treeRoots = buildTree();
+
+  return (
+    <div style={{ display: "flex", gap: 12, height: "calc(100vh - 200px)", minHeight: 500 }}>
+      {/* LEFT: tree */}
+      <div style={{ flex: "0 0 55%", display: "flex", flexDirection: "column", gap: 8 }}>
+
+        {/* filters */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          <input
+            style={{ ...inputStyle, width: 160 }}
+            placeholder="Filtrar usuario"
+            value={filters.user}
+            onChange={e => setFilters(f => ({ ...f, user: e.target.value }))}
+          />
+          <select
+            style={{ ...inputStyle, width: 140 }}
+            value={filters.role}
+            onChange={e => setFilters(f => ({ ...f, role: e.target.value }))}
+          >
+            <option value="">Todos los roles</option>
+            <option value="admin">admin</option>
+            <option value="configurador">configurador</option>
+            <option value="responsable">responsable</option>
+          </select>
+          <button onClick={expandAll} style={{ ...inputStyle, cursor: "pointer", fontSize: 11, padding: "4px 10px" }}>Expandir todo</button>
+          <button onClick={collapseAll} style={{ ...inputStyle, cursor: "pointer", fontSize: 11, padding: "4px 10px" }}>Colapsar todo</button>
+          {loading && <span style={{ fontSize: 11, color: "#6b7280" }}>Cargando…</span>}
+        </div>
+
+        {/* legend */}
+        <div style={{ display: "flex", gap: 10, fontSize: 10, color: "#6b7280", flexWrap: "wrap" }}>
+          {["cumplido", "proximo", "atrasado", "sin_compromiso"].map(s => {
+            const sc = statusColor(s);
+            return (
+              <span key={s} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                {statusDot(s)}
+                <span style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, borderRadius: 999, padding: "0 6px" }}>
+                  {statusLabel(s)}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+
+        {/* tree */}
+        <div style={{ flex: 1, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 6px", background: "white" }}>
+          {treeRoots.length === 0 && !loading && (
+            <div style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", paddingTop: 40 }}>
+              Sin carpetas o procesos visibles.
+            </div>
+          )}
+          {treeRoots.map(root => renderFolderNode(root, 0))}
+        </div>
+      </div>
+
+      {/* RIGHT: process detail panel */}
+      <div style={{ flex: 1, border: "1px solid #e5e7eb", borderRadius: 8, background: "white", overflowY: "auto", padding: "12px 14px" }}>
+        {!selectedProcess ? (
+          <div style={{ color: "#9ca3af", fontSize: 12, textAlign: "center", paddingTop: 60 }}>
+            Selecciona un proceso en el árbol para ver detalle, roles y asignaciones.
+          </div>
+        ) : (
+          <div>
+            {/* Header */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{selectedProcess.process_name}</div>
+              <div style={{ fontSize: 11, color: "#6b7280" }}>{(selectedProcess.folder_path || []).join(" / ") || "Sin carpeta"}</div>
+            </div>
+
+            {/* Status banner */}
+            {(() => {
+              const sc = statusColor(selectedProcess.monitor_status);
+              return (
+                <div style={{ background: sc.bg, border: `1px solid ${sc.border}`, color: sc.color, borderRadius: 8, padding: "8px 12px", fontSize: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>{statusLabel(selectedProcess.monitor_status)}</span>
+                  {selectedProcess.next_due_at && (
+                    <span>Próximo: {new Date(selectedProcess.next_due_at).toLocaleString("es-ES", { timeZone: "America/Santiago" })}</span>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Compliance stats */}
+            {selectedProcess.stats?.due_days > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6, marginBottom: 12 }}>
+                {[
+                  { label: "Programados", val: selectedProcess.stats.due_days, color: "#6b7280" },
+                  { label: "A tiempo", val: selectedProcess.stats.on_time_days, color: "#22c55e" },
+                  { label: "Tardíos", val: selectedProcess.stats.late_days, color: "#eab308" },
+                  { label: "Sin entrega", val: selectedProcess.stats.missed_days, color: "#ef4444" },
+                ].map(({ label, val, color }) => (
+                  <div key={label} style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 6, padding: "6px 8px", textAlign: "center" }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
+                    <div style={{ fontSize: 10, color: "#6b7280" }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedProcess.stats?.compliance_rate != null && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#6b7280", marginBottom: 3 }}>
+                  <span>Tasa de cumplimiento</span>
+                  <span style={{ fontWeight: 700, color: selectedProcess.stats.compliance_rate >= 80 ? "#22c55e" : selectedProcess.stats.compliance_rate >= 50 ? "#eab308" : "#ef4444" }}>
+                    {selectedProcess.stats.compliance_rate}%
+                  </span>
+                </div>
+                <div style={{ height: 6, background: "#e5e7eb", borderRadius: 999, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: 999,
+                    width: `${selectedProcess.stats.compliance_rate}%`,
+                    background: selectedProcess.stats.compliance_rate >= 80 ? "#22c55e" : selectedProcess.stats.compliance_rate >= 50 ? "#eab308" : "#ef4444",
+                    transition: "width 0.4s",
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {/* Last execution */}
+            {selectedProcess.last_execution?.timestamp && (
+              <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 12 }}>
+                Última ejecución: <strong style={{ color: "#374151" }}>
+                  {new Date(selectedProcess.last_execution.timestamp).toLocaleString("es-ES", { timeZone: "America/Santiago" })}
+                </strong>
+                {selectedProcess.last_execution.uploaded_by && <> por <strong style={{ color: "#374151" }}>{selectedProcess.last_execution.uploaded_by}</strong></>}
+              </div>
+            )}
+
+            <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+
+              {/* Roles */}
+              {["admin", "configurador", "responsable"].map(roleName => {
+                const roleUsers = selectedProcess.roles?.[roleName] || [];
+                const key = `${selectedProcess.process_id}:${roleName}`;
+                return (
+                  <div key={roleName} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Badge color={roleColor(roleName)}>{roleName}</Badge>
+                      <span style={{ fontSize: 10, color: "#9ca3af" }}>{roleUsers.length} usuario(s)</span>
+                    </div>
+                    <div style={{ marginBottom: 5, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                      {roleUsers.length === 0
+                        ? <span style={{ fontSize: 11, color: "#9ca3af" }}>Sin usuarios</span>
+                        : roleUsers.map(u => {
+                          const direct = (u.assigned_project_ids || []).includes(selectedProcess.process_id);
+                          return (
+                            <span key={u.id} style={{
+                              display: "inline-flex", alignItems: "center", gap: 5, padding: "2px 8px",
+                              borderRadius: 999, fontSize: 11,
+                              border: `1px solid ${direct ? "#d1d5db" : "#bfdbfe"}`,
+                              background: direct ? "#fff" : "#eff6ff", color: "#374151",
+                            }}>
+                              {u.username}
+                              {!direct && <span style={{ fontSize: 9, color: "#3b82f6" }}>heredado</span>}
+                              {direct && (
+                                <button onClick={() => { unassignFromProcess(selectedProcess.process_id, u); setSelectedProcess(null); }}
+                                  style={{ border: "none", background: "transparent", color: "#dc2626", cursor: "pointer", fontSize: 13, padding: 0, lineHeight: 1 }}>×</button>
+                              )}
+                            </span>
+                          );
+                        })
+                      }
+                    </div>
+                    <div style={{ display: "flex", gap: 5 }}>
+                      <select
+                        style={{ ...inputStyle, flex: 1, fontSize: 11 }}
+                        value={assignDraft[key] || ""}
+                        onChange={e => setDraft(selectedProcess.process_id, roleName, e.target.value)}
+                      >
+                        <option value="">Asignar {roleName}…</option>
+                        {usersForRole(roleName).map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+                      </select>
+                      <button
+                        onClick={() => assignToProcess(selectedProcess.process_id, roleName)}
+                        style={{ ...inputStyle, cursor: "pointer", fontSize: 11, padding: "4px 10px", background: "#e0f2fe", border: "1px solid #7dd3fc" }}
+                      >+ Asignar</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 function ResetTab({ onReset }) {
   const [projects, setProjects] = useState([]);

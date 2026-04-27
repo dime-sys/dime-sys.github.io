@@ -705,6 +705,8 @@ def role_traceability(
             if not (assigned["admin"] or assigned["configurador"] or assigned["responsable"]):
                 continue
 
+        monitor_row = _build_process_monitor_row(pid, rec, datetime.now(_SCL))
+
         process_items.append({
             "process_id": pid,
             "process_name": rec.get("process_name") or rec.get("latest_input_name") or pid,
@@ -721,6 +723,13 @@ def role_traceability(
                 "configurador": len(assigned["configurador"]),
                 "responsable": len(assigned["responsable"]),
             },
+            # Compliance data from commitment monitor
+            "monitor_status": monitor_row.get("monitor_status"),
+            "monitor_status_label": monitor_row.get("monitor_status_label"),
+            "next_due_at": monitor_row.get("next_due_at"),
+            "last_execution": monitor_row.get("last_execution"),
+            "stats": monitor_row.get("stats"),
+            "commitment_schedule": monitor_row.get("commitment_schedule"),
         })
 
     process_items.sort(key=lambda p: ((p.get("folder_path") or ["zz"]), p.get("process_name") or ""))
@@ -733,6 +742,11 @@ def role_traceability(
         admins = {u["id"] for p in scoped for u in p.get("roles", {}).get("admin", [])}
         confs = {u["id"] for p in scoped for u in p.get("roles", {}).get("configurador", [])}
         resps = {u["id"] for p in scoped for u in p.get("roles", {}).get("responsable", [])}
+        status_counts = {"cumplido": 0, "proximo": 0, "atrasado": 0, "sin_compromiso": 0}
+        for p in scoped:
+            s = p.get("monitor_status") or "sin_compromiso"
+            status_counts[s] = status_counts.get(s, 0) + 1
+        compliance_rates = [p["stats"]["compliance_rate"] for p in scoped if p.get("stats") and p["stats"].get("compliance_rate") is not None]
         folder_aggregate.append({
             "id": node_pid,
             "full_path": node.get("full_path"),
@@ -744,6 +758,8 @@ def role_traceability(
                 "configurador": len(confs),
                 "responsable": len(resps),
             },
+            "status_counts": status_counts,
+            "avg_compliance_rate": round(sum(compliance_rates) / len(compliance_rates), 1) if compliance_rates else None,
         })
 
     return {
