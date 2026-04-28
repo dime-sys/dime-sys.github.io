@@ -1570,7 +1570,7 @@ function RoleTraceabilityTab() {
                 {floatingUsers.map((u) => {
                   const roles = Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || "responsable"];
                   return (
-                    <React.Fragment key={u.id}>
+                    <span key={u.id} style={{ display: "contents" }}>
                       <div style={{
                         position: "relative",
                         minHeight: 22,
@@ -1594,7 +1594,7 @@ function RoleTraceabilityTab() {
                         <span>{u.username}</span>
                         <span style={{ fontSize: 10, color: "#64748b" }}>{roles.join(", ")}</span>
                       </span>
-                    </React.Fragment>
+                    </span>
                   );
                 })}
               </div>
