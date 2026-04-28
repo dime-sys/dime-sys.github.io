@@ -115,6 +115,42 @@ def _next_due_datetime(schedule: dict, now: datetime):
     return None
 
 
+def _coerce_schedule(schedule_raw):
+    """Normalize commitment schedule to dict shape expected by monitor helpers."""
+    if isinstance(schedule_raw, dict):
+        return schedule_raw
+
+    # Backward compatibility: some records store schedule as a list of checkpoints
+    # like [{day_of_week, hour, minute}, ...]. Convert it into ranged schedule.
+    if isinstance(schedule_raw, list):
+        dias = []
+        rangos = []
+        for item in schedule_raw:
+            if not isinstance(item, dict):
+                continue
+            day_of_week = item.get("day_of_week")
+            if isinstance(day_of_week, int) and day_of_week in _DIAS_MAP:
+                dias.append(_DIAS_MAP[day_of_week])
+
+            hour = item.get("hour")
+            minute = item.get("minute", 0)
+            if isinstance(hour, int) and isinstance(minute, int):
+                start = f"{max(0, min(23, hour)):02d}:{max(0, min(59, minute)):02d}"
+                end_hour = min(23, hour + 1)
+                end = f"{end_hour:02d}:{max(0, min(59, minute)):02d}"
+                if end != start:
+                    rangos.append({"hora_inicio": start, "hora_fin": end})
+
+        return {
+            "activo": len(schedule_raw) > 0,
+            "tipo": "semanal" if dias else "diario",
+            "dias": sorted(set(dias)),
+            "rangos": rangos or [{"hora_inicio": "00:00", "hora_fin": "23:59"}],
+        }
+
+    return {}
+
+
 def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> dict:
     from app.db.user_store import USERS_DB
     from app.routes.rules import _get_folder_ids
@@ -124,7 +160,7 @@ def _build_process_monitor_row(process_id: str, record: dict, now: datetime) -> 
     else:
         now = now.astimezone(_SCL)
 
-    schedule = record.get("commitment_schedule") or {}
+    schedule = _coerce_schedule(record.get("commitment_schedule"))
     active_schedule = bool(schedule.get("activo"))
     folder_ids = _get_folder_ids(record.get("project_id")) or []
 
