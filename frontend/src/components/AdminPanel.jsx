@@ -1191,6 +1191,7 @@ function CommitmentMonitorTab() {
 
 function RoleTraceabilityTab() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [data, setData] = useState({ folders: [], folder_aggregate: [], processes: [], users: [] });
   const [allUsers, setAllUsers] = useState([]);
   const [filters, setFilters] = useState({ scope_id: "", process_id: "", role: "", user: "" });
@@ -1200,6 +1201,7 @@ function RoleTraceabilityTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
       const params = new URLSearchParams();
       if (filters.scope_id) params.set("scope_id", filters.scope_id);
@@ -1212,6 +1214,14 @@ function RoleTraceabilityTab() {
         fetch(`${API}/users/`, { headers: getAuthHeaders() }),
       ]);
 
+      if (!traceRes.ok || !usersRes.ok) {
+        const status = !traceRes.ok ? traceRes.status : usersRes.status;
+        if (status === 401) {
+          throw new Error("Sesion expirada o sin permisos para trazabilidad. Inicia sesion como admin.");
+        }
+        throw new Error(`No se pudo cargar trazabilidad (HTTP ${status}).`);
+      }
+
       const trace = await traceRes.json();
       const users = await usersRes.json();
 
@@ -1222,6 +1232,10 @@ function RoleTraceabilityTab() {
         users: trace?.users || [],
       });
       setAllUsers(Array.isArray(users) ? users : []);
+    } catch (e) {
+      setData({ folders: [], folder_aggregate: [], processes: [], users: [] });
+      setAllUsers([]);
+      setError(e?.message || "Error al cargar trazabilidad.");
     } finally {
       setLoading(false);
     }
@@ -1499,6 +1513,19 @@ function RoleTraceabilityTab() {
           <button onClick={collapseAll} style={{ ...inputStyle, cursor: "pointer", fontSize: 11, padding: "4px 10px" }}>Colapsar todo</button>
           {loading && <span style={{ fontSize: 11, color: "#6b7280" }}>Cargando…</span>}
         </div>
+
+        {error && (
+          <div style={{
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#991b1b",
+            borderRadius: 8,
+            padding: "8px 10px",
+            fontSize: 12,
+          }}>
+            {error}
+          </div>
+        )}
 
         {/* legend */}
         <div style={{ display: "flex", gap: 10, fontSize: 10, color: "#6b7280", flexWrap: "wrap" }}>
