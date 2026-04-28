@@ -323,6 +323,17 @@ def _resolve_admin_scope(admin_user: dict):
     from app.routes.projects import PROJECTS_DB, find_node_by_id
     from app.routes.upload import FILES_DB
 
+    from app.routes.auth import _has_role
+
+    # Admin users should always have full visibility in admin traceability views,
+    # regardless of explicit assigned scopes.
+    if _has_role(admin_user, "admin"):
+        return {
+            "is_global": True,
+            "allowed_folder_ids": set(),
+            "allowed_process_ids": set(),
+        }
+
     assigned_ids = set(admin_user.get("assigned_project_ids", []) or [])
     if not assigned_ids:
         return {
