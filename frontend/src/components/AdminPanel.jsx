@@ -1259,7 +1259,26 @@ function RoleTraceabilityTab() {
 
   const roleColor = (r) => r === "admin" ? "blue" : r === "configurador" ? "green" : "yellow";
 
-  const usersForRole = (roleName) => allUsers.filter(u => u.role === roleName);
+  const userHasRole = (u, roleName) => {
+    const roles = Array.isArray(u?.roles) ? u.roles : (u?.role ? [u.role] : []);
+    return roles.includes(roleName);
+  };
+
+  const usersForRole = (roleName) => allUsers.filter(u => userHasRole(u, roleName));
+
+  const filteredUsers = (allUsers || []).filter((u) => {
+    if (filters.role && !userHasRole(u, filters.role)) return false;
+    if (filters.user.trim() && !(u.username || "").toLowerCase().includes(filters.user.trim().toLowerCase())) return false;
+    return true;
+  });
+
+  const visibleProcessIds = new Set((data.processes || []).map((p) => p.process_id));
+  const floatingUsers = filteredUsers.filter((u) => {
+    const assigned = u.assigned_project_ids || [];
+    if (!assigned.length) return true;
+    return !assigned.some((pid) => visibleProcessIds.has(pid));
+  });
+  const connectedUsers = filteredUsers.length - floatingUsers.length;
 
   const setDraft = (processId, roleName, value) =>
     setAssignDraft(d => ({ ...d, [`${processId}:${roleName}`]: value }));
@@ -1496,14 +1515,67 @@ function RoleTraceabilityTab() {
           })}
         </div>
 
+        {/* global snapshot */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
+          {[
+            { label: "Usuarios visibles", value: filteredUsers.length, color: "#1f2937" },
+            { label: "Conectados", value: connectedUsers, color: "#166534" },
+            { label: "Flotantes", value: floatingUsers.length, color: "#7c2d12" },
+            { label: "Procesos visibles", value: (data.processes || []).length, color: "#1d4ed8" },
+          ].map((kpi) => (
+            <div key={kpi.label} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 10px", background: "#fff" }}>
+              <div style={{ fontSize: 10, color: "#6b7280" }}>{kpi.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: kpi.color }}>{kpi.value}</div>
+            </div>
+          ))}
+        </div>
+
         {/* tree */}
         <div style={{ flex: 1, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 6px", background: "white" }}>
           {treeRoots.length === 0 && !loading && (
             <div style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", paddingTop: 40 }}>
-              Sin carpetas o procesos visibles.
+              {(filteredUsers.length > 0)
+                ? "No hay procesos visibles para el filtro actual. Revisa usuarios flotantes abajo."
+                : "Sin carpetas o procesos visibles."}
             </div>
           )}
           {treeRoots.map(root => renderFolderNode(root, 0))}
+        </div>
+
+        {/* floating users */}
+        <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, background: "white", padding: "8px 10px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>Usuarios flotantes (sin conexión a procesos visibles)</div>
+            <div style={{ fontSize: 11, color: "#9ca3af" }}>{floatingUsers.length}</div>
+          </div>
+          {floatingUsers.length === 0 ? (
+            <div style={{ fontSize: 11, color: "#9ca3af" }}>Todos los usuarios visibles están conectados a procesos del árbol.</div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 110, overflowY: "auto" }}>
+              {floatingUsers.map((u) => {
+                const roles = Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || "responsable"];
+                return (
+                  <span
+                    key={u.id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      border: "1px dashed #cbd5e1",
+                      borderRadius: 999,
+                      padding: "2px 8px",
+                      background: "#f8fafc",
+                      color: "#334155",
+                    }}
+                  >
+                    <span>{u.username}</span>
+                    <span style={{ fontSize: 10, color: "#64748b" }}>{roles.join(", ")}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
