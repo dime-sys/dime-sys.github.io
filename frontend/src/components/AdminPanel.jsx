@@ -1551,29 +1551,53 @@ function RoleTraceabilityTab() {
           {floatingUsers.length === 0 ? (
             <div style={{ fontSize: 11, color: "#9ca3af" }}>Todos los usuarios visibles están conectados a procesos del árbol.</div>
           ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 110, overflowY: "auto" }}>
-              {floatingUsers.map((u) => {
-                const roles = Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || "responsable"];
-                return (
-                  <span
-                    key={u.id}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 11,
-                      border: "1px dashed #cbd5e1",
-                      borderRadius: 999,
-                      padding: "2px 8px",
-                      background: "#f8fafc",
-                      color: "#334155",
-                    }}
-                  >
-                    <span>{u.username}</span>
-                    <span style={{ fontSize: 10, color: "#64748b" }}>{roles.join(", ")}</span>
-                  </span>
-                );
-              })}
+            <div style={{ maxHeight: 180, overflowY: "auto", paddingTop: 2 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#1e3a8a",
+                  background: "#dbeafe",
+                  border: "1px solid #93c5fd",
+                  borderRadius: 999,
+                  padding: "2px 10px",
+                }}>
+                  Sistema
+                </span>
+                <span style={{ fontSize: 10, color: "#6b7280" }}>nodo raíz</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "24px 1fr", rowGap: 4, columnGap: 4 }}>
+                {floatingUsers.map((u) => {
+                  const roles = Array.isArray(u.roles) && u.roles.length ? u.roles : [u.role || "responsable"];
+                  return (
+                    <React.Fragment key={u.id}>
+                      <div style={{
+                        position: "relative",
+                        minHeight: 22,
+                      }}>
+                        <div style={{ position: "absolute", top: "50%", left: 2, right: 2, height: 1, background: "#cbd5e1" }} />
+                        <div style={{ position: "absolute", top: "50%", left: 1, width: 4, height: 4, marginTop: -2, borderRadius: "50%", background: "#94a3b8" }} />
+                      </div>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 11,
+                          border: "1px dashed #cbd5e1",
+                          borderRadius: 999,
+                          padding: "2px 8px",
+                          background: "#f8fafc",
+                          color: "#334155",
+                        }}
+                      >
+                        <span>{u.username}</span>
+                        <span style={{ fontSize: 10, color: "#64748b" }}>{roles.join(", ")}</span>
+                      </span>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
