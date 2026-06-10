@@ -1,0 +1,25 @@
+# Railway-specific frontend Dockerfile.
+# Build context must be the repo root (Railway: leave "Root Directory" blank).
+#
+# At runtime, nginx processes nginx.railway.conf as a template and substitutes
+# ${BACKEND_INTERNAL_URL} with the value set in the Railway service env vars.
+
+# ── build stage ──────────────────────────────────────────────────────────────
+FROM node:20 AS build
+
+WORKDIR /app
+COPY frontend/ .
+
+RUN npm install
+RUN npm run build
+
+# ── serve stage ───────────────────────────────────────────────────────────────
+FROM nginx:alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Place config in /etc/nginx/templates/ — the official nginx image automatically
+# runs envsubst on *.template files and writes the result to /etc/nginx/conf.d/
+COPY nginx/nginx.railway.conf /etc/nginx/templates/default.conf.template
+
+EXPOSE 80
