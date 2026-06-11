@@ -14,4 +14,7 @@ envsubst '$BACKEND_INTERNAL_URL' \
 echo "INFO: Generated nginx config:"
 cat /etc/nginx/conf.d/default.conf
 
+echo "INFO: Generated nginx config:"
+cat /etc/nginx/conf.d/default.conf
+
 exec nginx -g 'daemon off;'
