@@ -10,6 +10,10 @@ app = FastAPI()
 # Version ID changes on each app restart
 _APP_START_TIME = datetime.now().isoformat()
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "started_at": _APP_START_TIME}
+
 # Auto-seed demo data if empty (for demo/first-run scenarios)
 def _auto_seed_if_empty():
     """Load demo data if database is empty."""
