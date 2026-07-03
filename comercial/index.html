@@ -880,6 +880,82 @@
 
     .slide-caption { text-align: center; margin-top: 14px; font-size: 0.85rem; color: var(--text-muted); max-width: 700px; margin-left: auto; margin-right: auto; }
 
+    /* ── DEMO MODAL ─────────────────────────────────────────────── */
+    .demo-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .demo-overlay.open { opacity: 1; pointer-events: all; }
+    .demo-modal {
+      background: #0d1526;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      padding: 36px 32px 28px;
+      max-width: 480px; width: 100%;
+      position: relative;
+      transform: translateY(24px);
+      transition: transform 0.25s ease;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+    }
+    .demo-overlay.open .demo-modal { transform: translateY(0); }
+    .demo-close {
+      position: absolute; top: 14px; right: 16px;
+      background: transparent; border: none;
+      color: #475569; font-size: 1.1rem; cursor: pointer;
+      padding: 4px 8px; border-radius: 6px;
+      transition: color 0.2s;
+    }
+    .demo-close:hover { color: #e2e8f0; }
+    .dm-icon { font-size: 2rem; margin-bottom: 10px; }
+    .demo-modal h3 { font-size: 1.3rem; font-weight: 800; color: #f1f5f9; margin-bottom: 6px; }
+    .dm-sub { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 22px; line-height: 1.55; }
+    .dm-field { margin-bottom: 14px; }
+    .dm-field label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 5px;
+    }
+    .req { color: var(--red); }
+    .dm-opt { font-weight: 400; text-transform: none; letter-spacing: 0; color: #475569; }
+    .dm-field input, .dm-field textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-size: 0.9rem; color: #e2e8f0;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s;
+      outline: none;
+      resize: vertical;
+    }
+    .dm-field input:focus, .dm-field textarea:focus {
+      border-color: rgba(59,130,246,0.6);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    }
+    .dm-field input::placeholder, .dm-field textarea::placeholder { color: #334155; }
+    .dm-submit {
+      width: 100%; margin-top: 6px;
+      background: linear-gradient(135deg, var(--blue), #6366f1);
+      color: #fff; border: none;
+      padding: 13px; border-radius: 10px;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 4px 20px rgba(59,130,246,0.3);
+    }
+    .dm-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .dm-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .dm-privacy { font-size: 0.72rem; color: #334155; text-align: center; margin-top: 10px; }
+    .dm-success { text-align: center; padding: 16px 0; }
+    .dm-success h4 { font-size: 1.05rem; font-weight: 700; color: var(--green-l); margin-bottom: 8px; }
+    .dm-success p { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px; }
+
     /* ── RESPONSIVE ────────────────────────────────────────────── */    @media (max-width: 768px) {
       .nav-links { display: none; }
       .gov-grid, .formats-inner, .alerts-grid, .rules-inner { grid-template-columns: 1fr; }
@@ -907,7 +983,7 @@
       <a href="#preview">Preview</a>
       <a href="#multiproject">Multi-proyecto</a>
     </div>
-    <a href="#cta" class="nav-cta">Solicitar demo</a>
+    <button class="nav-cta open-demo-modal">Solicitar demo</button>
   </div>
 </nav>
 
@@ -923,7 +999,7 @@
     <h1><strong>Data Intake, Management &amp; Execution</strong></h1>
     <p>Unifica, transforma y entrega tus datos manuales con trazabilidad completa — desde el correo o el Excel de origen hasta cualquier destino en la nube.</p>
     <div class="hero-actions">
-      <a href="#cta" class="btn-primary">Solicitar una demo</a>
+      <button class="btn-primary open-demo-modal">Solicitar una demo</button>
       <a href="#features" class="btn-secondary">Ver capacidades →</a>
     </div>
   </div>
@@ -1690,13 +1766,50 @@
     <h2>Empieza hoy.<br><span class="gradient-text">Tu primer proyecto en 24 horas.</span></h2>
     <p>Agenda una demo y te mostramos cómo D.I.M.E. se adapta a los flujos de datos manuales de tu organización.</p>
     <div class="cta-actions">
-      <a href="mailto:contacto@dime.app" class="btn-primary">Agendar demo →</a>
+      <button class="btn-primary open-demo-modal">Agendar demo →</button>
       <a href="#features" class="btn-secondary">Ver capacidades</a>
     </div>
   </div>
 </section>
 
 <!-- ════════════════════════════════════════════════════════════ FOOTER -->
+<!-- ════════════════════════════════════════════════════════════ DEMO MODAL -->
+<div id="demoModal" class="demo-overlay" aria-hidden="true">
+  <div class="demo-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="demo-close" id="closeModal" aria-label="Cerrar">✕</button>
+    <div class="dm-icon">📬</div>
+    <h3 id="modalTitle">Solicita tu demo gratuita</h3>
+    <p class="dm-sub">Cuéntanos sobre tu operación y te contactamos para mostrarte cómo D.I.M.E. se adapta a tu empresa.</p>
+
+    <form id="demoForm" action="https://formspree.io/f/mrewrlbn" method="POST" novalidate>
+      <div class="dm-field">
+        <label for="dm-name">Nombre <span class="req">*</span></label>
+        <input id="dm-name" name="nombre" type="text" placeholder="Tu nombre o empresa" required />
+      </div>
+      <div class="dm-field">
+        <label for="dm-contact">Correo o teléfono <span class="req">*</span></label>
+        <input id="dm-contact" name="contacto" type="text" placeholder="correo@empresa.cl o +56 9 xxxx xxxx" required />
+      </div>
+      <div class="dm-field">
+        <label for="dm-msg">¿Qué quieres digitalizar? <span class="dm-opt">(opcional)</span></label>
+        <textarea id="dm-msg" name="mensaje" rows="3" placeholder="Ej: reportes Excel mensuales de ventas, PDFs de proveedores..."></textarea>
+      </div>
+      <input type="hidden" name="_subject" value="Nueva solicitud de demo — D.I.M.E." />
+      <input type="text" name="_gotcha" style="display:none" />
+
+      <button type="submit" class="dm-submit" id="dmSubmitBtn">Enviar solicitud →</button>
+      <p class="dm-privacy">Tu información no se comparte con terceros.</p>
+    </form>
+
+    <div id="demoSuccess" class="dm-success" hidden>
+      <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+      <h4>¡Listo! Nos ponemos en contacto contigo pronto.</h4>
+      <p>Revisaremos tu solicitud y te escribiremos al correo o teléfono que indicaste.</p>
+      <button class="dm-submit" id="closeSuccess">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <footer>
   <div class="container footer-inner">
     <div>
@@ -1750,6 +1863,71 @@
 
   // Auto-advance every 30s
   setInterval(() => goTo(current + 1), 30000);
+
+  // ── Demo modal ────────────────────────────────────────────────
+  const overlay   = document.getElementById('demoModal');
+  const form      = document.getElementById('demoForm');
+  const success   = document.getElementById('demoSuccess');
+  const submitBtn = document.getElementById('dmSubmitBtn');
+
+  function openModal() {
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('dm-name').focus();
+  }
+  function closeModal() {
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll('.open-demo-modal').forEach(btn =>
+    btn.addEventListener('click', openModal)
+  );
+  document.getElementById('closeModal').addEventListener('click', closeModal);
+  document.getElementById('closeSuccess').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name    = document.getElementById('dm-name').value.trim();
+    const contact = document.getElementById('dm-contact').value.trim();
+    if (!name || !contact) {
+      [document.getElementById('dm-name'), document.getElementById('dm-contact')].forEach(el => {
+        if (!el.value.trim()) el.style.borderColor = 'rgba(239,68,68,0.7)';
+      });
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: new FormData(form)
+      });
+      if (res.ok) {
+        form.hidden = true;
+        success.hidden = false;
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Enviar solicitud →';
+        alert('Hubo un error al enviar. Por favor inténtalo de nuevo.');
+      }
+    } catch {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Enviar solicitud →';
+      alert('Error de conexión. Por favor inténtalo de nuevo.');
+    }
+  });
+
+  ['dm-name','dm-contact'].forEach(id =>
+    document.getElementById(id).addEventListener('input', function() {
+      if (this.value.trim()) this.style.borderColor = '';
+    })
+  );
 </script>
 </body>
 </html>
