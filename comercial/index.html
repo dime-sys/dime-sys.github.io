@@ -1880,6 +1880,15 @@
     overlay.classList.remove('open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    // Resetear form al cerrar para que se pueda volver a enviar
+    form.reset();
+    form.hidden = false;
+    success.hidden = true;
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Enviar solicitud →';
+    ['dm-name','dm-contact'].forEach(id =>
+      document.getElementById(id).style.borderColor = ''
+    );
   }
 
   document.querySelectorAll('.open-demo-modal').forEach(btn =>
