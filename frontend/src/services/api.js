@@ -74,14 +74,6 @@ export const preregisterUser = async (data) => {
 
 // ── File upload ───────────────────────────────────────────────────────────────
 
-export const uploadFile = async (file, metadata) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("metadata", JSON.stringify(metadata));
-
-  return await axios.post(`${API}/upload/`, formData, { headers: getAuthHeaders() });
-};
-
 export const uploadFileToProject = async (file, metadata, projectId, nombreProceso, commitmentSchedule) => {
   const formData = new FormData();
   formData.append("file", file);
