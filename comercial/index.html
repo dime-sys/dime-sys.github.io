@@ -570,8 +570,317 @@
     .footer-tagline { color: var(--text-muted); font-size: 0.82rem; }
     .footer-copy { color: #334155; font-size: 0.78rem; }
 
-    /* ── RESPONSIVE ────────────────────────────────────────────── */
-    @media (max-width: 768px) {
+    /* ── PREVIEW / CAROUSEL ────────────────────────────────────── */
+    .preview { background: var(--dark); }
+
+    .carousel-wrap { position: relative; }
+
+    .carousel-tabs {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .ctab {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ctab:hover { background: rgba(255,255,255,0.08); color: #e2e8f0; }
+    .ctab.active {
+      background: rgba(59,130,246,0.15);
+      border-color: rgba(59,130,246,0.5);
+      color: var(--blue-l);
+    }
+
+    .carousel-stage { position: relative; min-height: 520px; }
+    .cslide { display: none; animation: fadeSlide 0.35s ease; }
+    .cslide.active { display: block; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Mock browser chrome */
+    .mock-browser {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+      background: #0a0f1e;
+    }
+    .mock-bar {
+      background: #0d1526;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mb-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .mb-dot.r { background: #ef4444; }
+    .mb-dot.a { background: #f59e0b; }
+    .mb-dot.g { background: #22c55e; }
+    .mb-url {
+      margin-left: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 14px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      flex: 1; max-width: 280px;
+    }
+    .mock-body {
+      min-height: 420px;
+    }
+    .mock-split { display: flex; }
+
+    /* Sidebar mock */
+    .mock-sidebar {
+      width: 240px; flex-shrink: 0;
+      background: #0a0f1e;
+      border-right: 1px solid var(--border);
+      padding: 0;
+    }
+    .mock-header-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: #0d1526;
+    }
+    .dime-mini {
+      font-family: 'Fredoka One', cursive;
+      font-size: 1.1rem;
+      background: linear-gradient(90deg, #ef4444, #f59e0b, #22c55e, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .mock-btn-sm {
+      font-size: 0.7rem; font-weight: 600;
+      padding: 3px 10px; border-radius: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .active-btn {
+      background: rgba(59,130,246,0.15);
+      border-color: rgba(59,130,246,0.4);
+      color: var(--blue-l);
+    }
+    .mock-tree { padding: 12px 8px; }
+    .tree-node {
+      padding: 5px 8px; border-radius: 6px;
+      font-size: 0.76rem; color: #94a3b8;
+      cursor: default; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .tree-node.lv1 { color: #cbd5e1; font-weight: 600; }
+    .tree-node.lv2 { color: #94a3b8; font-weight: 500; }
+    .tree-node.lv3 { padding-left: 16px; color: #64748b; }
+    .tree-node.selected { background: rgba(59,130,246,0.12); color: var(--blue-l); border-left: 2px solid var(--blue); }
+    .tree-children { padding-left: 14px; }
+    .tn-badge {
+      font-size: 0.62rem; padding: 1px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.05); color: #475569;
+      margin-left: 4px;
+    }
+    .tn-files { font-size: 0.62rem; color: var(--green); margin-left: 4px; }
+
+    /* Right panel mock */
+    .mock-right { flex: 1; padding: 14px 16px; overflow: hidden; }
+    .mock-breadcrumb { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+    .mock-breadcrumb strong { color: #e2e8f0; }
+    .mock-upload-zone {
+      border: 1px dashed rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #475569;
+      margin-bottom: 12px;
+    }
+    .mock-section-title {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .mock-count {
+      background: rgba(59,130,246,0.2); color: var(--blue-l);
+      font-size: 0.7rem; padding: 1px 7px; border-radius: 999px;
+    }
+
+    /* Process row */
+    .mock-proc-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+    .proc-name { font-size: 0.82rem; font-weight: 600; color: #e2e8f0; margin-bottom: 2px; }
+    .proc-meta { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 6px; }
+    .proc-dots { display: flex; gap: 3px; flex-wrap: wrap; }
+    .pdot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .pdot.green { background: var(--green); }
+    .pdot.red   { background: var(--red); }
+    .pdot.amber { background: var(--amber); }
+    .pdot.gray  { background: #1e293b; border: 1px solid #334155; }
+    .proc-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .pact { font-size: 0.8rem; color: #475569; cursor: pointer; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border); }
+
+    /* History slide */
+    .hist-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; margin-bottom: 4px;
+    }
+    .hstat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+    .hstat-v { font-size: 1.4rem; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+    .hstat-l { font-size: 0.65rem; color: var(--text-muted); }
+    .hist-calendar { display: flex; flex-direction: column; gap: 4px; }
+    .hcal-row { display: flex; align-items: center; gap: 4px; }
+    .hcal-label { font-size: 0.66rem; color: #475569; width: 44px; flex-shrink: 0; }
+    .hdot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    .hdot.green { background: rgba(34,197,94,0.7); }
+    .hdot.red   { background: rgba(239,68,68,0.7); }
+    .hdot.amber { background: rgba(245,158,11,0.7); }
+    .hdot.gray  { background: #1e293b; border: 1px solid #334155; }
+    .hist-uploads { display: flex; flex-direction: column; gap: 5px; }
+    .hu-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 7px; }
+    .hu-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; }
+    .hu-icon.green { background: rgba(34,197,94,0.2); color: var(--green); }
+    .hu-icon.red   { background: rgba(239,68,68,0.2); color: var(--red); }
+    .hu-file { font-size: 0.75rem; color: #e2e8f0; flex: 1; }
+    .hu-meta { font-size: 0.68rem; color: #475569; white-space: nowrap; }
+
+    /* Config modal */
+    .mock-modal {
+      background: #111827;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      max-width: 860px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+    .mm-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px;
+      background: #0d1526;
+      border-bottom: 1px solid var(--border);
+    }
+    .mm-title { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
+    .mm-close { color: #475569; cursor: pointer; }
+    .mm-body { padding: 18px 20px; }
+    .mm-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .mm-field { margin-bottom: 12px; }
+    .mm-field label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 4px; }
+    .mm-input, .mm-select {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.8rem; color: #e2e8f0;
+    }
+    .mm-rule-list { display: flex; flex-direction: column; gap: 4px; }
+    .mm-rule { font-size: 0.76rem; padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+    .mm-rule.active { color: var(--green-l); border-color: rgba(34,197,94,0.25); }
+    .mm-rule.inactive { color: #475569; border-style: dashed; }
+    .sched-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 8px; }
+    .sched-hour {
+      padding: 5px 2px; text-align: center;
+      font-size: 0.62rem; border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: #334155;
+    }
+    .sched-hour.active { background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.4); color: var(--blue-l); }
+    .mm-output-box { margin-top: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .mm-dest-row { font-size: 0.78rem; color: #94a3b8; margin-bottom: 5px; display: flex; gap: 8px; align-items: center; }
+    .dest-icon { font-size: 1rem; }
+    .mm-footer { display: flex; gap: 10px; justify-content: flex-end; padding-top: 14px; border-top: 1px solid var(--border); margin-top: 14px; }
+    .mm-btn-save { background: linear-gradient(135deg, var(--blue), #6366f1); color: #fff; border: none; padding: 8px 20px; border-radius: 7px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .mm-btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 8px 16px; border-radius: 7px; font-size: 0.82rem; cursor: pointer; }
+
+    /* Traceability */
+    .traza-body { padding: 12px 16px; }
+    .traza-stats { display: flex; gap: 16px; margin-bottom: 14px; }
+    .tstat { text-align: center; }
+    .tstat b { display: block; font-size: 1.3rem; font-weight: 800; color: #e2e8f0; }
+    .tstat span { font-size: 0.68rem; color: var(--text-muted); }
+    .traza-tree { }
+    .tt-node { margin-bottom: 2px; }
+    .tt-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 7px;
+      font-size: 0.76rem; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tt-row:hover { background: rgba(255,255,255,0.04); }
+    .selected-row { background: rgba(59,130,246,0.1) !important; border-left: 2px solid var(--blue); }
+    .tt-company { background: rgba(255,255,255,0.02); }
+    .tt-dept { background: rgba(255,255,255,0.01); }
+    .tt-proj { }
+    .tt-arrow { color: #475569; font-size: 0.7rem; flex-shrink: 0; }
+    .tt-badge { font-size: 0.6rem; padding: 1px 7px; border-radius: 4px; font-weight: 600; flex-shrink: 0; }
+    .badge-company { background: rgba(59,130,246,0.15); color: var(--blue-l); }
+    .badge-dept    { background: rgba(245,158,11,0.15); color: var(--amber-l); }
+    .badge-proj    { background: rgba(34,197,94,0.15); color: var(--green-l); }
+    .tt-name { flex: 1; color: #e2e8f0; font-weight: 500; }
+    .tt-right { display: flex; gap: 10px; align-items: center; margin-left: auto; }
+    .tt-warn { font-size: 0.68rem; color: var(--amber); }
+    .tt-pct { font-size: 0.7rem; font-weight: 700; }
+    .tt-pct.red { color: var(--red); }
+    .tt-pct.amber { color: var(--amber); }
+    .tt-pct.green { color: var(--green); }
+    .tt-dim { font-size: 0.66rem; color: #475569; }
+    .tt-children { padding-left: 20px; }
+
+    /* User management */
+    .user-roles-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .urole {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      font-size: 0.76rem; color: var(--text-muted);
+      cursor: pointer;
+    }
+    .active-role { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.4); color: var(--blue-l); }
+    .urole-count { background: rgba(255,255,255,0.08); padding: 1px 7px; border-radius: 999px; font-size: 0.66rem; }
+    .user-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .user-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+    .user-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+    .admin-av { background: rgba(239,68,68,0.15); }
+    .conf-av  { background: rgba(245,158,11,0.15); }
+    .resp-av  { background: rgba(59,130,246,0.15); }
+    .user-info { flex: 0 0 140px; }
+    .user-name { font-size: 0.82rem; font-weight: 600; color: #e2e8f0; }
+    .user-role-tag { font-size: 0.65rem; color: var(--text-muted); }
+    .user-role-tag.conf { color: var(--amber-l); }
+    .user-role-tag.resp { color: var(--blue-l); }
+    .user-proj-pill { font-size: 0.68rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px; color: #64748b; flex: 1; }
+    .user-actions { margin-left: auto; }
+    .mock-add-btn { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: var(--green-l); padding: 7px 16px; border-radius: 7px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+
+    /* Carousel nav */
+    .carousel-nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
+    .cnav-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 7px 18px; border-radius: 7px; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+    .cnav-btn:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+    .carousel-dots { display: flex; gap: 6px; }
+    .cdot { width: 7px; height: 7px; border-radius: 50%; background: #1e293b; border: 1px solid #334155; transition: background 0.2s; cursor: pointer; }
+    .cdot.active { background: var(--blue); border-color: var(--blue); }
+
+    .slide-caption { text-align: center; margin-top: 14px; font-size: 0.85rem; color: var(--text-muted); max-width: 700px; margin-left: auto; margin-right: auto; }
+
+    /* ── RESPONSIVE ────────────────────────────────────────────── */    @media (max-width: 768px) {
       .nav-links { display: none; }
       .gov-grid, .formats-inner, .alerts-grid, .rules-inner { grid-template-columns: 1fr; }
       .gov-visual, .funnel-box { order: -1; }
@@ -595,6 +904,7 @@
       <a href="#features">Capacidades</a>
       <a href="#how">Cómo funciona</a>
       <a href="#governance">Gobernanza</a>
+      <a href="#preview">Preview</a>
       <a href="#multiproject">Multi-proyecto</a>
     </div>
     <a href="#cta" class="nav-cta">Solicitar demo</a>
@@ -1028,6 +1338,350 @@
   </div>
 </section>
 
+<!-- ════════════════════════════════════════════════════════════ PREVIEW -->
+<section class="preview" id="preview">
+  <div class="container">
+    <div class="section-header">
+      <div class="tag">Preview del producto</div>
+      <h2>Así se ve D.I.M.E. por dentro</h2>
+      <p>Cada pantalla está diseñada para que el responsable de datos actúe con una sola vista, sin navegar por sistemas dispersos.</p>
+    </div>
+
+    <div class="carousel-wrap">
+      <!-- Tabs -->
+      <div class="carousel-tabs" id="carouselTabs">
+        <button class="ctab active" data-idx="0">🌲 Árbol de proyectos</button>
+        <button class="ctab" data-idx="1">📊 Seguimiento de proceso</button>
+        <button class="ctab" data-idx="2">⚙️ Configuración de regla</button>
+        <button class="ctab" data-idx="3">🏛️ Trazabilidad de roles</button>
+        <button class="ctab" data-idx="4">👥 Gestión de usuarios</button>
+      </div>
+
+      <!-- Slides -->
+      <div class="carousel-stage">
+
+        <!-- SLIDE 0: Árbol de proyectos + Lista de procesos -->
+        <div class="cslide active" data-idx="0">
+          <div class="mock-browser">
+            <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
+            <div class="mock-body mock-split">
+              <!-- Sidebar / árbol -->
+              <div class="mock-sidebar">
+                <div class="mock-header-bar">
+                  <span class="dime-mini">D.I.M.E</span>
+                  <span class="mock-btn-sm">👥 Usuarios</span>
+                  <span class="mock-btn-sm active-btn">⚙ Admin</span>
+                </div>
+                <div class="mock-tree">
+                  <div class="tree-node lv1 open">▾ <span class="tn-name">ACME Corp</span> <span class="tn-badge">Compañía</span></div>
+                  <div class="tree-children">
+                    <div class="tree-node lv2 open">▾ <span class="tn-name">Dept. Ventas</span> <span class="tn-badge">Departamento</span></div>
+                    <div class="tree-children">
+                      <div class="tree-node lv3">📁 <span class="tn-name">Proyecto Leads</span></div>
+                      <div class="tree-node lv3">📁 <span class="tn-name">Proyecto Funnels</span></div>
+                    </div>
+                    <div class="tree-node lv2 open">▾ <span class="tn-name">Dept. Operaciones</span> <span class="tn-badge">Departamento</span></div>
+                    <div class="tree-children">
+                      <div class="tree-node lv3 selected">📁 <span class="tn-name">Proyecto Inventario</span> <span class="tn-files">1 proceso</span></div>
+                      <div class="tree-node lv3">📁 <span class="tn-name">Proyecto Facturación</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Right panel -->
+              <div class="mock-right">
+                <div class="mock-breadcrumb">Proyecto › <strong>Proyecto Inventario</strong></div>
+                <div class="mock-upload-zone">📁 Arrastra tu archivo aquí o haz clic · Soporta Excel, CSV, PDF</div>
+                <div class="mock-section-title">PROCESOS · PROYECTO INVENTARIO <span class="mock-count">2</span></div>
+                <!-- Process row 1 -->
+                <div class="mock-proc-row">
+                  <div class="proc-left">
+                    <div class="proc-name">Actualización de Inventario (Real-time)</div>
+                    <div class="proc-meta">Cada hora · 24 ventanas/día · <span style="color:var(--amber)">⚠ Atrasado</span></div>
+                    <div class="proc-dots">
+                      <span class="pdot green" title="Cumplido"></span><span class="pdot green"></span><span class="pdot green"></span><span class="pdot red" title="Incumplido"></span><span class="pdot red"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span>
+                    </div>
+                  </div>
+                  <div class="proc-actions"><span class="pact">≡</span><span class="pact">✎</span><span class="pact">🗑</span></div>
+                </div>
+                <!-- Process row 2 -->
+                <div class="mock-proc-row">
+                  <div class="proc-left">
+                    <div class="proc-name">Plan Mensual de Stock</div>
+                    <div class="proc-meta">Mensual · día 1 09:00 · <span style="color:var(--green)">✓ Cumplido</span></div>
+                    <div class="proc-dots">
+                      <span class="pdot green"></span><span class="pdot green"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span><span class="pdot gray"></span>
+                    </div>
+                  </div>
+                  <div class="proc-actions"><span class="pact">≡</span><span class="pact">✎</span><span class="pact">🗑</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-caption">Vista principal: árbol jerárquico de proyectos y lista de procesos activos con indicadores de estado en tiempo real.</div>
+        </div>
+
+        <!-- SLIDE 1: Historial de ejecuciones / seguimiento -->
+        <div class="cslide" data-idx="1">
+          <div class="mock-browser">
+            <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
+            <div class="mock-body mock-split">
+              <div class="mock-sidebar" style="opacity:0.4">
+                <div class="mock-header-bar"><span class="dime-mini">D.I.M.E</span></div>
+                <div class="tree-node lv3 selected" style="margin-top:80px">📁 Proyecto Inventario</div>
+              </div>
+              <div class="mock-right">
+                <div class="mock-breadcrumb">Proceso › <strong>Actualización de Inventario (Real-time)</strong></div>
+                <!-- Stats row -->
+                <div class="hist-stats">
+                  <div class="hstat"><div class="hstat-v" style="color:var(--green)">87%</div><div class="hstat-l">Cumplimiento</div></div>
+                  <div class="hstat"><div class="hstat-v" style="color:var(--blue)">24</div><div class="hstat-l">Cargas correctas</div></div>
+                  <div class="hstat"><div class="hstat-v" style="color:var(--red)">3</div><div class="hstat-l">Incumplimientos</div></div>
+                  <div class="hstat"><div class="hstat-v" style="color:var(--amber)">1</div><div class="hstat-l">Con advertencia</div></div>
+                </div>
+                <!-- Timeline calendar -->
+                <div class="mock-section-title" style="margin-top:12px">HISTORIAL · ÚLTIMOS 30 DÍAS</div>
+                <div class="hist-calendar">
+                  <div class="hcal-row" v-for="week">
+                    <span class="hcal-label">25 may</span>
+                    <span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot red"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span>
+                  </div>
+                  <div class="hcal-row">
+                    <span class="hcal-label">1 jun</span>
+                    <span class="hdot green"></span><span class="hdot green"></span><span class="hdot gray"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot red"></span><span class="hdot green"></span>
+                  </div>
+                  <div class="hcal-row">
+                    <span class="hcal-label">8 jun</span>
+                    <span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot amber"></span><span class="hdot green"></span><span class="hdot green"></span>
+                  </div>
+                  <div class="hcal-row">
+                    <span class="hcal-label">15 jun</span>
+                    <span class="hdot green"></span><span class="hdot red"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span>
+                  </div>
+                  <div class="hcal-row">
+                    <span class="hcal-label">22 jun</span>
+                    <span class="hdot green"></span><span class="hdot green"></span><span class="hdot green"></span><span class="hdot gray"></span><span class="hdot gray"></span><span class="hdot gray"></span><span class="hdot gray"></span>
+                  </div>
+                </div>
+                <!-- Metadata -->
+                <div class="mock-section-title" style="margin-top:12px">ÚLTIMAS CARGAS</div>
+                <div class="hist-uploads">
+                  <div class="hu-row"><span class="hu-icon green">✓</span><span class="hu-file">inventory_2026-07-03.csv</span><span class="hu-meta">SYSTEM · hace 2h · 4.821 filas</span></div>
+                  <div class="hu-row"><span class="hu-icon green">✓</span><span class="hu-file">inventory_2026-07-02.csv</span><span class="hu-meta">SYSTEM · ayer · 4.907 filas</span></div>
+                  <div class="hu-row"><span class="hu-icon red">✗</span><span class="hu-file">inventory_2026-06-29.csv</span><span class="hu-meta">SYSTEM · 4 días · Esquema incompatible</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-caption">Historial completo de ejecuciones: cargas correctas, incumplimientos por ventana, metadata de cada archivo y trazabilidad del responsable.</div>
+        </div>
+
+        <!-- SLIDE 2: Configuración de regla / schedule -->
+        <div class="cslide" data-idx="2">
+          <div class="mock-browser">
+            <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
+            <div class="mock-body" style="padding:20px; background:#0d1526;">
+              <!-- Modal overlay -->
+              <div class="mock-modal">
+                <div class="mm-header">
+                  <span class="mm-title">⚙ Configuración del proceso</span>
+                  <span class="mm-close">✕</span>
+                </div>
+                <div class="mm-body">
+                  <div class="mm-cols">
+                    <div class="mm-left">
+                      <div class="mm-field">
+                        <label>Nombre del proceso</label>
+                        <div class="mm-input">Actualización de Inventario (Real-time)</div>
+                      </div>
+                      <div class="mm-field">
+                        <label>Proyecto asignado</label>
+                        <div class="mm-input">Proyecto Inventario</div>
+                      </div>
+                      <div class="mm-field">
+                        <label>Frecuencia</label>
+                        <div class="mm-select">⏱ Cada hora <span style="float:right">▾</span></div>
+                      </div>
+                      <div class="mm-field">
+                        <label>Responsable</label>
+                        <div class="mm-select">👤 maria_responsable <span style="float:right">▾</span></div>
+                      </div>
+                      <div class="mm-field">
+                        <label>Reglas de transformación</label>
+                        <div class="mm-rule-list">
+                          <div class="mm-rule active">✓ Normalización de columnas CSV</div>
+                          <div class="mm-rule active">✓ Validación de stock ≥ 0</div>
+                          <div class="mm-rule active">✓ Mapeo código → SKU</div>
+                          <div class="mm-rule inactive">+ Agregar regla...</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mm-right">
+                      <label style="font-size:0.78rem;color:#94a3b8;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">Ventanas de compromiso</label>
+                      <div class="sched-grid">
+                        <div class="sched-hour active">00:00</div><div class="sched-hour active">01:00</div><div class="sched-hour active">02:00</div><div class="sched-hour active">03:00</div>
+                        <div class="sched-hour active">04:00</div><div class="sched-hour active">05:00</div><div class="sched-hour active">06:00</div><div class="sched-hour active">07:00</div>
+                        <div class="sched-hour active">08:00</div><div class="sched-hour active">09:00</div><div class="sched-hour active">10:00</div><div class="sched-hour active">11:00</div>
+                        <div class="sched-hour">12:00</div><div class="sched-hour">13:00</div><div class="sched-hour">14:00</div><div class="sched-hour">15:00</div>
+                        <div class="sched-hour">16:00</div><div class="sched-hour">17:00</div><div class="sched-hour">18:00</div><div class="sched-hour">19:00</div>
+                        <div class="sched-hour">20:00</div><div class="sched-hour">21:00</div><div class="sched-hour">22:00</div><div class="sched-hour">23:00</div>
+                      </div>
+                      <div style="font-size:0.72rem;color:#64748b;margin-top:8px;">12 ventanas activas · Alerta si no se carga en ventana</div>
+                      <div class="mm-output-box">
+                        <div style="font-size:0.75rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Destino de salida</div>
+                        <div class="mm-dest-row"><span class="dest-icon">☁️</span> <span>AWS S3 · bucket/inventario/procesado/</span></div>
+                        <div class="mm-dest-row"><span class="dest-icon">🔔</span> <span>Alerta email si incumplimiento</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mm-footer">
+                    <button class="mm-btn-save">Guardar configuración</button>
+                    <button class="mm-btn-cancel">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-caption">Configuración completa de un proceso: nombre, responsable, frecuencia, reglas de transformación, ventanas de compromiso horarias y destino de entrega cloud.</div>
+        </div>
+
+        <!-- SLIDE 3: Trazabilidad de roles -->
+        <div class="cslide" data-idx="3">
+          <div class="mock-browser">
+            <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io / admin / trazabilidad</span></div>
+            <div class="mock-body" style="padding:0;">
+              <div class="mock-header-bar" style="padding:0 16px;">
+                <span class="dime-mini">D.I.M.E</span>
+                <span class="mock-btn-sm active-btn">⚙ Admin</span>
+                <span style="color:#94a3b8;font-size:0.8rem;margin-left:8px;">Monitoreo y Trazabilidad de Roles</span>
+              </div>
+              <div class="traza-body">
+                <!-- Stats bar -->
+                <div class="traza-stats">
+                  <div class="tstat"><b>7</b><span>Usuarios</span></div>
+                  <div class="tstat"><b>4</b><span>Conectados</span></div>
+                  <div class="tstat"><b style="color:var(--amber)">3</b><span>Flotantes</span></div>
+                  <div class="tstat"><b>6</b><span>Procesos</span></div>
+                </div>
+                <!-- Tree -->
+                <div class="traza-tree">
+                  <div class="tt-node">
+                    <div class="tt-row tt-company">
+                      <span class="tt-arrow">▾</span>
+                      <span class="tt-badge badge-company">Compañía</span>
+                      <span class="tt-name">ACME Corp</span>
+                      <div class="tt-right"><span class="tt-warn">⚠ 3 atrasados</span><span class="tt-pct amber">0.2% cumpl.</span><span class="tt-dim">6 proc · 3 resp</span></div>
+                    </div>
+                    <div class="tt-children">
+                      <div class="tt-node">
+                        <div class="tt-row tt-dept">
+                          <span class="tt-arrow">▾</span>
+                          <span class="tt-badge badge-dept">Departamento</span>
+                          <span class="tt-name">Departamento Ventas</span>
+                          <div class="tt-right"><span class="tt-warn">⚠ 2 atrasados</span><span class="tt-pct red">0% cumpl.</span><span class="tt-dim">3 proc · 2 resp</span></div>
+                        </div>
+                        <div class="tt-children">
+                          <div class="tt-row tt-proj">
+                            <span class="tt-arrow">▸</span>
+                            <span class="tt-badge badge-proj">Proyecto</span>
+                            <span class="tt-name">Proyecto Leads</span>
+                            <div class="tt-right"><span class="tt-warn">⚠ 1 atrasado</span><span class="tt-pct red">0% cumpl.</span><span class="tt-dim">2 proc · juan_resp</span></div>
+                          </div>
+                          <div class="tt-row tt-proj">
+                            <span class="tt-arrow">▸</span>
+                            <span class="tt-badge badge-proj">Proyecto</span>
+                            <span class="tt-name">Proyecto Funnels</span>
+                            <div class="tt-right"><span class="tt-warn">⚠ 1 atrasado</span><span class="tt-pct red">0% cumpl.</span><span class="tt-dim">1 proc · maria_resp</span></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="tt-node">
+                        <div class="tt-row tt-dept">
+                          <span class="tt-arrow">▾</span>
+                          <span class="tt-badge badge-dept">Departamento</span>
+                          <span class="tt-name">Departamento Operaciones</span>
+                          <div class="tt-right"><span class="tt-warn">⚠ 1 atrasado</span><span class="tt-pct amber">0.4% cumpl.</span><span class="tt-dim">3 proc · 2 resp</span></div>
+                        </div>
+                        <div class="tt-children">
+                          <div class="tt-row tt-proj selected-row">
+                            <span class="tt-arrow">▸</span>
+                            <span class="tt-badge badge-proj">Proyecto</span>
+                            <span class="tt-name">Proyecto Inventario</span>
+                            <div class="tt-right"><span class="tt-warn">⚠ 1 atrasado</span><span class="tt-pct amber">0.6% cumpl.</span><span class="tt-dim">2 proc · maria_resp</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-caption">Panel de trazabilidad de roles: árbol jerárquico con cumplimiento por proyecto, responsables asignados e indicadores de atraso en tiempo real.</div>
+        </div>
+
+        <!-- SLIDE 4: Gestión de usuarios -->
+        <div class="cslide" data-idx="4">
+          <div class="mock-browser">
+            <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io / usuarios</span></div>
+            <div class="mock-body mock-split">
+              <div class="mock-sidebar" style="opacity:0.4;">
+                <div class="mock-header-bar"><span class="dime-mini">D.I.M.E</span></div>
+                <div class="tree-node lv1 open" style="margin-top:60px">▾ ACME Corp</div>
+              </div>
+              <div class="mock-right">
+                <div class="mock-breadcrumb">👥 <strong>Gestión de usuarios</strong></div>
+                <div class="user-roles-bar">
+                  <div class="urole active-role">🛡 Admin <span class="urole-count">1</span></div>
+                  <div class="urole">⚙ Configurador <span class="urole-count">2</span></div>
+                  <div class="urole">📋 Responsable <span class="urole-count">4</span></div>
+                </div>
+                <div class="user-list">
+                  <div class="user-row">
+                    <div class="user-avatar admin-av">🛡</div>
+                    <div class="user-info"><div class="user-name">admin</div><div class="user-role-tag">Admin</div></div>
+                    <div class="user-actions"><span class="pact">✎</span></div>
+                  </div>
+                  <div class="user-row">
+                    <div class="user-avatar conf-av">⚙</div>
+                    <div class="user-info"><div class="user-name">carlos_conf</div><div class="user-role-tag conf">Configurador</div></div>
+                    <div class="user-proj-pill">Proyecto Facturación</div>
+                    <div class="user-actions"><span class="pact">✎</span></div>
+                  </div>
+                  <div class="user-row">
+                    <div class="user-avatar resp-av">📋</div>
+                    <div class="user-info"><div class="user-name">juan_responsable</div><div class="user-role-tag resp">Responsable</div></div>
+                    <div class="user-proj-pill">Leads daily · Leads weekly</div>
+                    <div class="user-actions"><span class="pact">✎</span></div>
+                  </div>
+                  <div class="user-row">
+                    <div class="user-avatar resp-av">📋</div>
+                    <div class="user-info"><div class="user-name">maria_responsable</div><div class="user-role-tag resp">Responsable</div></div>
+                    <div class="user-proj-pill">Funnels · Inventario</div>
+                    <div class="user-actions"><span class="pact">✎</span></div>
+                  </div>
+                </div>
+                <button class="mock-add-btn">➕ Nuevo usuario</button>
+              </div>
+            </div>
+          </div>
+          <div class="slide-caption">Gestión de usuarios multi-rol: asignación de responsables a procesos, roles por proyecto y control de acceso granular por área.</div>
+        </div>
+
+      </div><!-- /carousel-stage -->
+
+      <!-- Nav buttons -->
+      <div class="carousel-nav">
+        <button class="cnav-btn" id="prevBtn">← Anterior</button>
+        <div class="carousel-dots" id="carouselDots">
+          <span class="cdot active"></span><span class="cdot"></span><span class="cdot"></span><span class="cdot"></span><span class="cdot"></span>
+        </div>
+        <button class="cnav-btn" id="nextBtn">Siguiente →</button>
+      </div>
+    </div><!-- /carousel-wrap -->
+  </div>
+</section>
+
 <!-- ════════════════════════════════════════════════════════════ CTA -->
 <section class="cta" id="cta">
   <div class="cta-bg"></div>
@@ -1066,12 +1720,36 @@
     });
   }, { threshold: 0.08 });
 
-  document.querySelectorAll('.feat-card, .step, .mp-card, .alert-card, .gov-visual, .funnel-box, .rules-visual').forEach(el => {
+  document.querySelectorAll('.feat-card, .step, .mp-card, .alert-card, .gov-visual, .funnel-box, .rules-visual, .mock-browser').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(24px)';
     el.style.transition = 'opacity 0.55s ease, transform 0.55s ease';
     observer.observe(el);
   });
+
+  // Carousel logic
+  const tabs  = document.querySelectorAll('.ctab');
+  const slides = document.querySelectorAll('.cslide');
+  const dots  = document.querySelectorAll('.cdot');
+  let current = 0;
+
+  function goTo(idx) {
+    slides[current].classList.remove('active');
+    tabs[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = (idx + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    tabs[current].classList.add('active');
+    dots[current].classList.add('active');
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => goTo(+t.dataset.idx)));
+  dots.forEach((d, i) => d.addEventListener('click', () => goTo(i)));
+  document.getElementById('prevBtn').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('nextBtn').addEventListener('click', () => goTo(current + 1));
+
+  // Auto-advance every 5s
+  setInterval(() => goTo(current + 1), 5000);
 </script>
 </body>
 </html>
