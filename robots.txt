@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://dime-sys.github.io/sitemap.xml
