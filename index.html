@@ -11,12 +11,47 @@
   <meta property="og:url" content="https://dime-sys.github.io/" />
   <meta property="og:locale" content="es_CL" />
   <meta name="twitter:card" content="summary" />
+  <meta name="theme-color" content="#050914" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📥</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+<!-- ════════════════════════════════════════════════════════════ ICONOS SVG (sprite) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6L22 7"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-user-x" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="22" y2="13"/><line x1="22" y1="8" x2="17" y2="13"/></symbol>
+  <symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><line x1="21" y1="4" x2="14" y2="4"/><line x1="10" y1="4" x2="3" y2="4"/><line x1="21" y1="12" x2="12" y2="12"/><line x1="8" y1="12" x2="3" y2="12"/><line x1="21" y1="20" x2="16" y2="20"/><line x1="12" y1="20" x2="3" y2="20"/><line x1="14" y1="2" x2="14" y2="6"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="16" y1="18" x2="16" y2="22"/></symbol>
+  <symbol id="i-cloud-upload" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></symbol>
+  <symbol id="i-shield-check" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+  <symbol id="i-presentation" viewBox="0 0 24 24"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+  <symbol id="i-align-left" viewBox="0 0 24 24"><line x1="21" y1="6" x2="3" y2="6"/><line x1="15" y1="12" x2="3" y2="12"/><line x1="17" y1="18" x2="3" y2="18"/></symbol>
+  <symbol id="i-alert-octagon" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="i-folder-tree" viewBox="0 0 24 24"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2a1 1 0 0 0-.8-.4h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 5a2 2 0 0 0 2 2h3"/><path d="M3 3v13a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-bar-chart" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></symbol>
+</svg>
 
 <!-- ════════════════════════════════════════════════════════════ NAV -->
 <nav>
@@ -31,9 +66,11 @@
       <a href="#governance">Gobernanza</a>
       <a href="#preview">Producto</a>
     </div>
-    <button class="nav-cta open-demo-modal">Solicitar demo</button>
+    <button type="button" class="nav-cta open-demo-modal">Solicitar demo</button>
   </div>
 </nav>
+
+<main id="contenido">
 
 <!-- ════════════════════════════════════════════════════════════ HERO -->
 <section class="hero">
@@ -41,24 +78,24 @@
   <div class="hero-grid"></div>
   <div class="hero-content">
     <div class="tag">Plataforma para digitalizar la entrega de datos manuales</div>
-    <div class="hero-logo" aria-label="D.I.M.E.">
-      <span class="ld">D</span><span class="ld1">.</span><span class="li">I</span><span class="li1">.</span><span class="lm">M</span><span class="lm1">.</span><span class="le">E</span>
+    <div class="hero-logo" role="img" aria-label="D.I.M.E.">
+      <span aria-hidden="true" class="ld">D</span><span aria-hidden="true" class="ld1">.</span><span aria-hidden="true" class="li">I</span><span aria-hidden="true" class="li1">.</span><span aria-hidden="true" class="lm">M</span><span aria-hidden="true" class="lm1">.</span><span aria-hidden="true" class="le">E</span>
     </div>
     <h1>Deja de perseguir planillas por correo: <strong>recibe, valida y entrega tus datos con trazabilidad total</strong></h1>
     <p>D.I.M.E. (Data Intake Management Ecosystem) unifica y transforma los datos que hoy se mueven a mano en tu empresa — desde el correo o el Excel de origen hasta cualquier destino en la nube, con registro de quién entregó, cuándo y qué.</p>
     <div class="hero-actions">
-      <button class="btn-primary open-demo-modal">Solicitar una demo</button>
+      <button type="button" class="btn-primary open-demo-modal">Solicitar una demo</button>
       <a href="#features" class="btn-secondary">Ver capacidades →</a>
     </div>
   </div>
-  <div class="scroll-hint">
+  <div class="scroll-hint" aria-hidden="true">
     <div class="scroll-dot"></div>
     Explorar
   </div>
 </section>
 
 <!-- ════════════════════════════════════════════════════════════ STATS -->
-<div class="stats">
+<div class="stats" role="region" aria-label="Cifras clave de la plataforma">
   <div class="container">
     <div class="stats-grid">
       <div class="stat-item">
@@ -95,22 +132,22 @@
     </div>
     <div class="problem-grid">
       <div class="pain-card">
-        <div class="pain-icon">📧</div>
+        <div class="pain-icon"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg></div>
         <h3>Planillas que viajan por correo</h3>
         <p>Versiones duplicadas, adjuntos perdidos y nadie sabe cuál es la última. El dato oficial vive en la bandeja de entrada de alguien.</p>
       </div>
       <div class="pain-card">
-        <div class="pain-icon">✂️</div>
+        <div class="pain-icon"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></div>
         <h3>Consolidación manual</h3>
         <p>Analistas copiando y pegando entre archivos, cada semana o cada cierre. Horas de trabajo repetitivo y errores que nadie detecta a tiempo.</p>
       </div>
       <div class="pain-card">
-        <div class="pain-icon">🕳️</div>
+        <div class="pain-icon"><svg class="icon" aria-hidden="true"><use href="#i-user-x"/></svg></div>
         <h3>Nadie sabe quién no entregó</h3>
         <p>El cierre se atrasa, la responsabilidad se diluye y descubrir qué área falló requiere una cadena de correos y llamadas.</p>
       </div>
       <div class="pain-card">
-        <div class="pain-icon">💥</div>
+        <div class="pain-icon"><svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"/></svg></div>
         <h3>Errores que se descubren tarde</h3>
         <p>Una columna renombrada o un valor fuera de rango llega hasta el reporte final, y corregirlo cuesta mucho más que prevenirlo.</p>
       </div>
@@ -131,7 +168,7 @@
 
       <!-- 1 -->
       <div class="feat-card c1">
-        <div class="feat-icon">📥</div>
+        <div class="feat-icon"><svg class="icon" aria-hidden="true"><use href="#i-inbox"/></svg></div>
         <div class="feat-num">Capacidad 01</div>
         <h3>Unificación de formatos heterogéneos</h3>
         <p>Ingiere datos desde correos electrónicos, archivos Excel, PDF, presentaciones PowerPoint, CSV o cualquier fuente manual. D.I.M.E. los normaliza y consolida en un modelo único, eliminando la fragmentación.</p>
@@ -146,7 +183,7 @@
 
       <!-- 2 -->
       <div class="feat-card c2">
-        <div class="feat-icon">⚙️</div>
+        <div class="feat-icon"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg></div>
         <div class="feat-num">Capacidad 02</div>
         <h3>Reglas de transformación configurables y programadas</h3>
         <p>Define reglas de negocio sin código: mapeos de columnas, validaciones de rango, fórmulas derivadas y más. Cada regla se ejecuta automáticamente según una agenda horaria, diaria o personalizada.</p>
@@ -160,7 +197,7 @@
 
       <!-- 3 -->
       <div class="feat-card c3">
-        <div class="feat-icon">☁️</div>
+        <div class="feat-icon"><svg class="icon" aria-hidden="true"><use href="#i-cloud-upload"/></svg></div>
         <div class="feat-num">Capacidad 03</div>
         <h3>Entrega trazable a cualquier destino cloud</h3>
         <p>El output procesado se carga de forma auditada en el destino que elijas — S3, Azure Blob, Google Drive, FTP o un endpoint propio. Cada entrega queda registrada con timestamp, responsable y resultado.</p>
@@ -174,7 +211,7 @@
 
       <!-- 4 -->
       <div class="feat-card c4">
-        <div class="feat-icon">🏛️</div>
+        <div class="feat-icon"><svg class="icon" aria-hidden="true"><use href="#i-shield-check"/></svg></div>
         <div class="feat-num">Capacidad 04</div>
         <h3>Trazabilidad y gobernanza de responsables</h3>
         <p>Asigna áreas y responsables a cada proyecto y conjunto de datos. D.I.M.E. registra cumplimientos e incumplimientos de SLA, generando un historial auditable que facilita la rendición de cuentas.</p>
@@ -188,7 +225,7 @@
 
       <!-- 5 -->
       <div class="feat-card c5">
-        <div class="feat-icon">🔔</div>
+        <div class="feat-icon"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg></div>
         <div class="feat-num">Capacidad 05</div>
         <h3>Inteligencia de alertas sobre datos manuales</h3>
         <p>Detecta incompatibilidades de esquema, valores fuera de rango, entregas tardías o reglas incumplidas. Alerta al responsable en tiempo real para que el error se corrija antes de impactar en producción.</p>
@@ -214,30 +251,30 @@
     </div>
     <div class="steps">
       <div class="step">
-        <div class="step-circle">📤</div>
+        <div class="step-circle"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></div>
         <div>
-          <h4>1. Carga</h4>
+          <h3>1. Carga</h3>
           <p>El área responsable sube su archivo en el formato que ya usa hoy.</p>
         </div>
       </div>
       <div class="step">
-        <div class="step-circle">🔧</div>
+        <div class="step-circle"><svg class="icon" aria-hidden="true"><use href="#i-wrench"/></svg></div>
         <div>
-          <h4>2. Transformación</h4>
+          <h3>2. Transformación</h3>
           <p>Las reglas configuradas procesan, validan y convierten el dato automáticamente.</p>
         </div>
       </div>
       <div class="step">
-        <div class="step-circle">✅</div>
+        <div class="step-circle"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg></div>
         <div>
-          <h4>3. Validación</h4>
+          <h3>3. Validación</h3>
           <p>D.I.M.E. verifica calidad, dispara alertas si hay problemas y registra el resultado.</p>
         </div>
       </div>
       <div class="step">
-        <div class="step-circle">🚀</div>
+        <div class="step-circle"><svg class="icon" aria-hidden="true"><use href="#i-send"/></svg></div>
         <div>
-          <h4>4. Entrega</h4>
+          <h3>4. Entrega</h3>
           <p>El output se deposita en el destino cloud con trazabilidad completa del ciclo.</p>
         </div>
       </div>
@@ -254,30 +291,37 @@
         <h2>Tus datos, en el formato que ya existen</h2>
         <p>No le pidas a tu operación que cambie sus hábitos. D.I.M.E. se adapta a los formatos que ya producen tus equipos y los unifica en un modelo estructurado y reutilizable.</p>
         <div class="format-pills">
-          <div class="format-pill fp1">📊 Excel / XLSX</div>
-          <div class="format-pill fp2">📄 PDF</div>
-          <div class="format-pill fp3">📑 PowerPoint</div>
-          <div class="format-pill fp4">📧 Correo electrónico</div>
-          <div class="format-pill fp5">📁 CSV / TSV</div>
-          <div class="format-pill fp6">🔗 JSON / XML</div>
-          <div class="format-pill fp8">📝 Texto plano</div>
+          <div class="format-pill fp1"><svg class="icon" aria-hidden="true"><use href="#i-table"/></svg> Excel / XLSX</div>
+          <div class="format-pill fp2"><svg class="icon" aria-hidden="true"><use href="#i-file-text"/></svg> PDF</div>
+          <div class="format-pill fp3"><svg class="icon" aria-hidden="true"><use href="#i-presentation"/></svg> PowerPoint</div>
+          <div class="format-pill fp4"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg> Correo electrónico</div>
+          <div class="format-pill fp5"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg> CSV / TSV</div>
+          <div class="format-pill fp6"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg> JSON / XML</div>
+          <div class="format-pill fp8"><svg class="icon" aria-hidden="true"><use href="#i-align-left"/></svg> Texto plano</div>
         </div>
       </div>
-      <div class="funnel-box">
+      <div class="funnel-box" aria-hidden="true">
         <div class="funnel-row">Fuentes de entrada</div>
-        <div class="funnel-icons">📊 📄 📑 📧 📁 🔗</div>
+        <div class="funnel-icons">
+          <svg class="icon" aria-hidden="true"><use href="#i-table"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="#i-file-text"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="#i-presentation"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="#i-file"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>
+        </div>
         <div class="arrow-down">▼</div>
         <div style="text-align:center;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">Reglas de transformación D.I.M.E.</div>
         <div class="arrow-down">▼</div>
         <div class="funnel-output">
-          📦 Output estructurado y validado
+          <svg class="icon" aria-hidden="true"><use href="#i-package"/></svg> Output estructurado y validado
         </div>
         <div class="arrow-down">▼</div>
         <div class="funnel-clouds">
-          <div class="cloud-badge">☁️ AWS</div>
-          <div class="cloud-badge">☁️ Azure</div>
-          <div class="cloud-badge">☁️ GCP</div>
-          <div class="cloud-badge">🔌 API</div>
+          <div class="cloud-badge"><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg> AWS</div>
+          <div class="cloud-badge"><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg> Azure</div>
+          <div class="cloud-badge"><svg class="icon" aria-hidden="true"><use href="#i-cloud"/></svg> GCP</div>
+          <div class="cloud-badge"><svg class="icon" aria-hidden="true"><use href="#i-plug"/></svg> API</div>
         </div>
       </div>
     </div>
@@ -288,7 +332,7 @@
 <section class="governance" id="governance">
   <div class="container">
     <div class="gov-grid">
-      <div class="gov-visual">
+      <div class="gov-visual" aria-hidden="true">
         <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;">
           Panel de cumplimiento — mes en curso
         </div>
@@ -351,7 +395,7 @@
           <li>Versionado de reglas con rollback</li>
         </ul>
       </div>
-      <div class="rules-visual">
+      <div class="rules-visual" aria-hidden="true">
         <div class="rv-header">
           <div class="rv-dot" style="background:var(--red)"></div>
           <div class="rv-dot" style="background:var(--amber)"></div>
@@ -406,33 +450,33 @@
       </div>
       <div class="alert-cards">
         <div class="alert-card error">
-          <div class="alert-icon">🚨</div>
+          <div class="alert-icon" style="color:var(--red)"><svg class="icon" aria-hidden="true"><use href="#i-alert-octagon"/></svg></div>
           <div class="alert-body">
-            <h5>Esquema incompatible detectado</h5>
+            <h3>Esquema incompatible detectado</h3>
             <p>El archivo «ventas_junio.xlsx» del área Comercial tiene 3 columnas nuevas no definidas en la regla activa.</p>
           </div>
           <div class="alert-time">hace 2 min</div>
         </div>
         <div class="alert-card warn">
-          <div class="alert-icon">⚠️</div>
+          <div class="alert-icon" style="color:var(--amber)"><svg class="icon" aria-hidden="true"><use href="#i-alert-triangle"/></svg></div>
           <div class="alert-body">
-            <h5>Entrega tardía — Proyecto RRHH</h5>
+            <h3>Entrega tardía — Proyecto RRHH</h3>
             <p>El reporte mensual de dotación no ha sido cargado. SLA vence en 45 minutos.</p>
           </div>
           <div class="alert-time">hace 15 min</div>
         </div>
         <div class="alert-card ok">
-          <div class="alert-icon">✅</div>
+          <div class="alert-icon" style="color:var(--green)"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg></div>
           <div class="alert-body">
-            <h5>Ejecución exitosa — Finanzas</h5>
+            <h3>Ejecución exitosa — Finanzas</h3>
             <p>Regla «Normalización de montos CLP» completada. 4.821 filas procesadas y entregadas a S3.</p>
           </div>
           <div class="alert-time">hace 32 min</div>
         </div>
         <div class="alert-card info">
-          <div class="alert-icon">ℹ️</div>
+          <div class="alert-icon" style="color:var(--blue)"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg></div>
           <div class="alert-body">
-            <h5>Nueva versión de regla disponible</h5>
+            <h3>Nueva versión de regla disponible</h3>
             <p>El área Logística publicó una actualización de la regla «Consolidación de guías». Requiere revisión.</p>
           </div>
           <div class="alert-time">hace 1 h</div>
@@ -454,7 +498,7 @@
       <div class="mp-card">
         <div class="mp-header">
           <div class="mp-dot" style="background:var(--red)"></div>
-          <h4>Proyecto Finanzas</h4>
+          <h3>Proyecto Finanzas</h3>
         </div>
         <div class="mp-sub">Área: Control de Gestión · 3 reglas activas</div>
         <div class="mp-area">Responsable: <span>M. González</span></div>
@@ -464,7 +508,7 @@
       <div class="mp-card">
         <div class="mp-header">
           <div class="mp-dot" style="background:var(--amber)"></div>
-          <h4>Proyecto Ventas</h4>
+          <h3>Proyecto Ventas</h3>
         </div>
         <div class="mp-sub">Área: Comercial · 5 reglas activas</div>
         <div class="mp-area">Responsable: <span>P. Herrera</span></div>
@@ -474,7 +518,7 @@
       <div class="mp-card">
         <div class="mp-header">
           <div class="mp-dot" style="background:var(--green)"></div>
-          <h4>Proyecto RRHH</h4>
+          <h3>Proyecto RRHH</h3>
         </div>
         <div class="mp-sub">Área: Personas · 2 reglas activas</div>
         <div class="mp-area">Responsable: <span>C. Rojas</span></div>
@@ -484,7 +528,7 @@
       <div class="mp-card">
         <div class="mp-header">
           <div class="mp-dot" style="background:var(--blue)"></div>
-          <h4>Proyecto Logística</h4>
+          <h3>Proyecto Logística</h3>
         </div>
         <div class="mp-sub">Área: Operaciones · 4 reglas activas</div>
         <div class="mp-area">Responsable: <span>A. Morales</span></div>
@@ -506,20 +550,20 @@
 
     <div class="carousel-wrap">
       <!-- Tabs -->
-      <div class="carousel-tabs" id="carouselTabs">
-        <button class="ctab active" data-idx="0">🌲 Árbol de proyectos</button>
-        <button class="ctab" data-idx="1">📊 Seguimiento de proceso</button>
-        <button class="ctab" data-idx="2">⚙️ Configuración de proceso</button>
-        <button class="ctab" data-idx="3">🏛️ Trazabilidad de roles</button>
-        <button class="ctab" data-idx="4">👥 Gestión de usuarios</button>
+      <div class="carousel-tabs" id="carouselTabs" role="tablist" aria-label="Pantallas del producto">
+        <button type="button" class="ctab active" data-idx="0" role="tab" id="ctab-0" aria-selected="true" aria-controls="cslide-0"><svg class="icon" aria-hidden="true"><use href="#i-folder-tree"/></svg> Árbol de proyectos</button>
+        <button type="button" class="ctab" data-idx="1" role="tab" id="ctab-1" aria-selected="false" aria-controls="cslide-1" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-bar-chart"/></svg> Seguimiento de proceso</button>
+        <button type="button" class="ctab" data-idx="2" role="tab" id="ctab-2" aria-selected="false" aria-controls="cslide-2" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-sliders"/></svg> Configuración de proceso</button>
+        <button type="button" class="ctab" data-idx="3" role="tab" id="ctab-3" aria-selected="false" aria-controls="cslide-3" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-shield-check"/></svg> Trazabilidad de roles</button>
+        <button type="button" class="ctab" data-idx="4" role="tab" id="ctab-4" aria-selected="false" aria-controls="cslide-4" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg> Gestión de usuarios</button>
       </div>
 
       <!-- Slides -->
       <div class="carousel-stage">
 
         <!-- SLIDE 0: Árbol de proyectos + Lista de procesos -->
-        <div class="cslide active" data-idx="0">
-          <div class="mock-browser">
+        <div class="cslide active" data-idx="0" id="cslide-0" role="tabpanel" aria-labelledby="ctab-0">
+          <div class="mock-browser" aria-hidden="true">
             <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
             <div class="mock-body mock-split">
               <!-- Sidebar / árbol -->
@@ -579,8 +623,8 @@
         </div>
 
         <!-- SLIDE 1: Historial de ejecuciones / seguimiento -->
-        <div class="cslide" data-idx="1">
-          <div class="mock-browser">
+        <div class="cslide" data-idx="1" id="cslide-1" role="tabpanel" aria-labelledby="ctab-1">
+          <div class="mock-browser" aria-hidden="true">
             <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
             <div class="mock-body mock-split">
               <div class="mock-sidebar" style="opacity:0.4">
@@ -634,8 +678,8 @@
         </div>
 
         <!-- SLIDE 2: Configuración de regla / schedule -->
-        <div class="cslide" data-idx="2">
-          <div class="mock-browser">
+        <div class="cslide" data-idx="2" id="cslide-2" role="tabpanel" aria-labelledby="ctab-2">
+          <div class="mock-browser" aria-hidden="true">
             <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io</span></div>
             <div class="mock-body" style="padding:20px; background:#0d1526;">
               <!-- Modal overlay -->
@@ -692,8 +736,8 @@
                     </div>
                   </div>
                   <div class="mm-footer">
-                    <button class="mm-btn-save">Guardar configuración</button>
-                    <button class="mm-btn-cancel">Cancelar</button>
+                    <button type="button" class="mm-btn-save" tabindex="-1">Guardar configuración</button>
+                    <button type="button" class="mm-btn-cancel" tabindex="-1">Cancelar</button>
                   </div>
                 </div>
               </div>
@@ -703,8 +747,8 @@
         </div>
 
         <!-- SLIDE 3: Trazabilidad de roles -->
-        <div class="cslide" data-idx="3">
-          <div class="mock-browser">
+        <div class="cslide" data-idx="3" id="cslide-3" role="tabpanel" aria-labelledby="ctab-3">
+          <div class="mock-browser" aria-hidden="true">
             <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io / admin / trazabilidad</span></div>
             <div class="mock-body" style="padding:0;">
               <div class="mock-header-bar" style="padding:0 16px;">
@@ -778,8 +822,8 @@
         </div>
 
         <!-- SLIDE 4: Gestión de usuarios -->
-        <div class="cslide" data-idx="4">
-          <div class="mock-browser">
+        <div class="cslide" data-idx="4" id="cslide-4" role="tabpanel" aria-labelledby="ctab-4">
+          <div class="mock-browser" aria-hidden="true">
             <div class="mock-bar"><span class="mb-dot r"></span><span class="mb-dot a"></span><span class="mb-dot g"></span><span class="mb-url">app.dime.io / usuarios</span></div>
             <div class="mock-body mock-split">
               <div class="mock-sidebar" style="opacity:0.4;">
@@ -818,7 +862,7 @@
                     <div class="user-actions"><span class="pact">✎</span></div>
                   </div>
                 </div>
-                <button class="mock-add-btn">➕ Nuevo usuario</button>
+                <button type="button" class="mock-add-btn" tabindex="-1">+ Nuevo usuario</button>
               </div>
             </div>
           </div>
@@ -829,11 +873,11 @@
 
       <!-- Nav buttons -->
       <div class="carousel-nav">
-        <button class="cnav-btn" id="prevBtn">← Anterior</button>
+        <button type="button" class="cnav-btn" id="prevBtn">← Anterior</button>
         <div class="carousel-dots" id="carouselDots">
-          <span class="cdot active"></span><span class="cdot"></span><span class="cdot"></span><span class="cdot"></span><span class="cdot"></span>
+          <button type="button" class="cdot active" aria-label="Ir a pantalla 1"></button><button type="button" class="cdot" aria-label="Ir a pantalla 2"></button><button type="button" class="cdot" aria-label="Ir a pantalla 3"></button><button type="button" class="cdot" aria-label="Ir a pantalla 4"></button><button type="button" class="cdot" aria-label="Ir a pantalla 5"></button>
         </div>
-        <button class="cnav-btn" id="nextBtn">Siguiente →</button>
+        <button type="button" class="cnav-btn" id="nextBtn">Siguiente →</button>
       </div>
     </div><!-- /carousel-wrap -->
   </div>
@@ -847,55 +891,60 @@
     <h2>Empieza hoy.<br><span class="gradient-text">Tu primer proyecto en 24 horas.</span></h2>
     <p>Agenda una demo de 30 minutos y te mostramos, con tus propios archivos, cómo D.I.M.E. se adapta a los flujos de datos de tu organización.</p>
     <div class="cta-actions">
-      <button class="btn-primary open-demo-modal">Agendar demo →</button>
+      <button type="button" class="btn-primary open-demo-modal">Agendar demo →</button>
       <a href="#features" class="btn-secondary">Ver capacidades</a>
     </div>
     <p class="cta-note">Estamos incorporando a nuestras primeras empresas: los early adopters reciben implementación acompañada y condiciones preferentes.</p>
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════════ FOOTER -->
+</main>
+
 <!-- ════════════════════════════════════════════════════════════ DEMO MODAL -->
 <div id="demoModal" class="demo-overlay" aria-hidden="true">
   <div class="demo-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <button class="demo-close" id="closeModal" aria-label="Cerrar">✕</button>
-    <div class="dm-icon">📬</div>
+    <button type="button" class="demo-close" id="closeModal" aria-label="Cerrar">✕</button>
+    <div class="dm-icon" style="color:var(--blue-l)"><svg class="icon" aria-hidden="true"><use href="#i-mail"/></svg></div>
     <h3 id="modalTitle">Solicita tu demo gratuita</h3>
     <p class="dm-sub">Cuéntanos sobre tu operación y te contactamos para mostrarte cómo D.I.M.E. se adapta a tu empresa.</p>
 
     <form id="demoForm" action="https://formspree.io/f/mrewrlbn" method="POST" novalidate>
       <div class="dm-field">
-        <label for="dm-name">Nombre <span class="req">*</span></label>
-        <input id="dm-name" name="nombre" type="text" placeholder="Tu nombre" required />
+        <label for="dm-name">Nombre <span class="req" aria-hidden="true">*</span></label>
+        <input id="dm-name" name="nombre" type="text" placeholder="Ej: Camila Pérez…" autocomplete="name" required aria-describedby="err-dm-name" />
+        <p class="dm-error" id="err-dm-name" hidden>Ingresa tu nombre.</p>
       </div>
       <div class="dm-field">
-        <label for="dm-company">Empresa <span class="req">*</span></label>
-        <input id="dm-company" name="empresa" type="text" placeholder="Nombre de tu empresa" required />
+        <label for="dm-company">Empresa <span class="req" aria-hidden="true">*</span></label>
+        <input id="dm-company" name="empresa" type="text" placeholder="Ej: ACME S.A.…" autocomplete="organization" required aria-describedby="err-dm-company" />
+        <p class="dm-error" id="err-dm-company" hidden>Ingresa el nombre de tu empresa.</p>
       </div>
       <div class="dm-field">
-        <label for="dm-email">Correo <span class="req">*</span></label>
-        <input id="dm-email" name="correo" type="email" placeholder="correo@empresa.cl" required />
+        <label for="dm-email">Correo <span class="req" aria-hidden="true">*</span></label>
+        <input id="dm-email" name="correo" type="email" placeholder="Ej: correo@empresa.cl…" autocomplete="email" spellcheck="false" required aria-describedby="err-dm-email" />
+        <p class="dm-error" id="err-dm-email" hidden>Ingresa un correo válido.</p>
       </div>
       <div class="dm-field">
         <label for="dm-phone">Teléfono <span class="dm-opt">(opcional)</span></label>
-        <input id="dm-phone" name="telefono" type="tel" placeholder="+56 9 xxxx xxxx" />
+        <input id="dm-phone" name="telefono" type="tel" inputmode="tel" placeholder="Ej: +56 9 1234 5678…" autocomplete="tel" />
       </div>
       <div class="dm-field">
         <label for="dm-msg">¿Qué quieres digitalizar? <span class="dm-opt">(opcional)</span></label>
-        <textarea id="dm-msg" name="mensaje" rows="3" placeholder="Ej: reportes Excel mensuales de ventas, PDFs de proveedores..."></textarea>
+        <textarea id="dm-msg" name="mensaje" rows="3" placeholder="Ej: reportes Excel mensuales de ventas, PDFs de proveedores…"></textarea>
       </div>
       <input type="hidden" name="_subject" value="Nueva solicitud de demo — D.I.M.E." />
-      <input type="text" name="_gotcha" style="display:none" />
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true" />
 
       <button type="submit" class="dm-submit" id="dmSubmitBtn">Enviar solicitud →</button>
+      <p class="dm-form-status" id="dmFormStatus" role="alert" hidden></p>
       <p class="dm-privacy">Tu información no se comparte con terceros.</p>
     </form>
 
-    <div id="demoSuccess" class="dm-success" hidden>
-      <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+    <div id="demoSuccess" class="dm-success" aria-live="polite" hidden>
+      <div class="dm-success-icon" style="color:var(--green)"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg></div>
       <h4>¡Listo! Nos ponemos en contacto contigo pronto.</h4>
       <p>Revisaremos tu solicitud y te escribiremos al correo que indicaste.</p>
-      <button class="dm-submit" id="closeSuccess">Cerrar</button>
+      <button type="button" class="dm-submit" id="closeSuccess">Cerrar</button>
     </div>
   </div>
 </div>
@@ -910,7 +959,7 @@
     </div>
     <div class="footer-contact">
       <span class="footer-tagline">¿Tienes preguntas?</span>
-      <button class="nav-cta open-demo-modal">Escríbenos</button>
+      <button type="button" class="nav-cta open-demo-modal">Escríbenos</button>
     </div>
     <div class="footer-copy">© 2026 D.I.M.E. Todos los derechos reservados.</div>
   </div>
