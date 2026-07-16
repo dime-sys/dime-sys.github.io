@@ -1,5 +1,30 @@
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+// ── Tema claro/oscuro ─────────────────────────────────────────
+// El script inline del <head> ya dejó data-theme puesto antes del primer paint.
+const themeToggle = document.getElementById('themeToggle');
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+const systemLight = window.matchMedia('(prefers-color-scheme: light)');
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  themeMeta.setAttribute('content', theme === 'light' ? '#f6f8fb' : '#050914');
+  themeToggle.setAttribute('aria-label',
+    theme === 'light' ? 'Cambiar a tema oscuro' : 'Cambiar a tema claro');
+}
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  localStorage.setItem('theme', next);
+  applyTheme(next);
+});
+
+// Si el usuario no eligió tema manualmente, seguir los cambios del sistema
+systemLight.addEventListener('change', e => {
+  if (!localStorage.getItem('theme')) applyTheme(e.matches ? 'light' : 'dark');
+});
+
 // Smooth reveal on scroll (desactivado si el usuario prefiere menos movimiento)
 if (!reducedMotion.matches) {
   const observer = new IntersectionObserver((entries) => {
