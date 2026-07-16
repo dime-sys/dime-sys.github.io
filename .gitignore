@@ -1,32 +1,3 @@
-# Environment — NEVER commit this
-.env
-.env.local
-.env.production
-
-# DB Backups
-backups/
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-venv/
-.venv/
-*.egg-info/
-
-# Local runtime databases
-app_state.db
-*.sqlite
-*.sqlite3
-
-# Node
-node_modules/
-dist/
-dist-ssr/
-
-# Logs
-*.log
-
 # OS
 .DS_Store
 Thumbs.db
@@ -34,6 +5,3 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
-
-# Docker volumes (local data)
-postgres_data/
