@@ -24,7 +24,7 @@ No hay tests ni linter. Verificar cambios visuales en el navegador en ambos tema
 - Todos los colores del CSS son **tokens semánticos** definidos en `:root` (tema oscuro, el default) con overrides en `:root[data-theme="light"]` al inicio de `styles.css`: superficies (`--dark`, `--card`, `--card2`, `--surface`, `--surface-2`), textos (`--text-strong/body/soft/muted/faint`), bordes y acentos (`--red/--amber/--green/--blue` + variantes `-l`). **Nunca introducir colores fijos fuera de los mockups** — usar tokens para que ambos temas funcionen.
 - En tema claro los acentos usan versiones oscurecidas para cumplir contraste WCAG 4.5:1 sobre blanco; las variantes `-l` (texto sobre tintes) también se invierten a tonos oscuros.
 - Un script inline en el `<head>` de `index.html` aplica `data-theme` (localStorage → preferencia del sistema) **antes del primer paint** para evitar destello; `script.js` gestiona el toggle, persiste la elección y sigue los cambios del sistema si el usuario no eligió manualmente.
-- **Los mockups del producto (`.mock-browser`) se mantienen siempre oscuros**: al final de `styles.css` hay un bloque que re-ancla todos los tokens a sus valores oscuros dentro de ese scope. Son "capturas" de la app (que es oscura); no deben adaptarse al tema claro.
+- **Los mockups del producto (`.mock-browser`) siguen el tema activo**: usan los tokens semánticos globales más tres tokens locales (`--mock-bg`, `--mock-chrome`, `--mock-panel`) definidos en `.mock-browser` con valores oscuros por defecto y overrides en el bloque de tema claro al final de `styles.css`. No usar colores fijos dentro de los mockups (excepto los puntos de semáforo del chrome del navegador, `.mb-dot`).
 
 ### Iconos
 

@@ -30,19 +30,60 @@ if (!reducedMotion.matches) {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        e.target.style.opacity = '1';
-        e.target.style.transform = 'translateY(0)';
-        observer.unobserve(e.target);
+        const el = e.target;
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+        // Al terminar, se limpian los estilos inline para que la transición
+        // del reveal (y su delay) no pise las transiciones de hover del CSS
+        el.addEventListener('transitionend', function cleanup(ev) {
+          if (ev.target !== el) return; // transitionend burbujea desde los hijos
+          el.removeEventListener('transitionend', cleanup);
+          el.style.transition = '';
+          el.style.transitionDelay = '';
+          el.style.opacity = '';
+          el.style.transform = '';
+        });
+        observer.unobserve(el);
       }
     });
   }, { threshold: 0.08 });
 
+  // Stagger: los hermanos de un mismo grupo entran en cascada corta
+  const groupCounts = new Map();
   document.querySelectorAll('.feat-card, .step, .pain-card, .mp-card, .alert-card, .gov-visual, .funnel-box, .rules-visual, .mock-browser').forEach(el => {
+    const idx = groupCounts.get(el.parentElement) || 0;
+    groupCounts.set(el.parentElement, idx + 1);
     el.style.opacity = '0';
-    el.style.transform = 'translateY(24px)';
-    el.style.transition = 'opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1), transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out)';
+    el.style.transitionDelay = Math.min(idx * 60, 240) + 'ms';
     observer.observe(el);
   });
+}
+
+// Contador animado en las cifras clave (una vez, al entrar en el viewport)
+if (!reducedMotion.matches) {
+  const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      statObserver.unobserve(entry.target);
+      const el = entry.target;
+      const match = el.textContent.trim().match(/^(\d+)(.*)$/);
+      if (!match) return;
+      const target = +match[1];
+      const suffix = match[2];
+      const start = performance.now();
+      const duration = 900;
+      function tick(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cúbico
+        el.textContent = Math.round(target * eased) + suffix;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('.stat-value').forEach(el => statObserver.observe(el));
 }
 
 // ── Carousel ─────────────────────────────────────────────────
